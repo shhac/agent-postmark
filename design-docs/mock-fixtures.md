@@ -46,3 +46,6 @@ AGENT_POSTMARK_RUN_SUBPROCESS_E2E=1 go test ./internal/cli -run SubprocessE2E -c
 - Guarded mutation fixtures return deterministic receipts after the CLI has
   enforced `--yes`.
 - Golden fixtures in `internal/cli/testdata` pin important NDJSON contracts.
+
+Routes are declared in a single route table in `internal/mockpostmark/server.go`
+so `mockpostmark --routes` and request dispatch stay in sync.

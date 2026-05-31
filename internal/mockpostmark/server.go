@@ -14,39 +14,13 @@ func NewServer() http.Handler {
 }
 
 func Routes() []string {
-	return []string{
-		"GET  /healthz",
-		"GET  /servers",
-		"GET  /servers/{id}",
-		"GET  /servers/{id}/message-streams",
-		"GET  /domains",
-		"GET  /domains/{id}",
-		"POST /domains/{id}/verifyDkim",
-		"POST /domains/{id}/verifySPF",
-		"GET  /senders",
-		"GET  /senders/{id}",
-		"GET  /webhooks",
-		"GET  /webhooks/{id}",
-		"GET  /deliverystats",
-		"GET  /messages/outbound",
-		"GET  /messages/outbound/opens",
-		"GET  /messages/outbound/opens/{id}",
-		"GET  /messages/outbound/clicks",
-		"GET  /messages/outbound/clicks/{id}",
-		"GET  /messages/outbound/{id}/details",
-		"GET  /messages/outbound/{id}/dump",
-		"GET  /messages/inbound",
-		"GET  /messages/inbound/{id}/details",
-		"PUT  /messages/inbound/{id}/retry",
-		"PUT  /messages/inbound/{id}/bypass",
-		"GET  /bounces",
-		"GET  /bounces/{id}",
-		"GET  /bounces/{id}/dump",
-		"PUT  /bounces/{id}/activate",
-		"GET  /message-streams/{stream}/suppressions/dump",
-		"POST /message-streams/{stream}/suppressions",
-		"POST /message-streams/{stream}/suppressions/delete",
+	routes := mockRoutes()
+	out := make([]string, 0, len(routes)+1)
+	out = append(out, "GET  /healthz")
+	for _, route := range routes {
+		out = append(out, route.display)
 	}
+	return out
 }
 
 func handle(w http.ResponseWriter, r *http.Request) {
@@ -78,70 +52,121 @@ func authorized(r *http.Request) bool {
 
 func dispatch(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimSuffix(r.URL.Path, "/")
-	switch {
-	case r.Method == http.MethodGet && path == "/servers":
-		writeList(w, "Servers", servers(), r)
-	case r.Method == http.MethodGet && path == "/servers/101":
-		write(w, http.StatusOK, servers()[0])
-	case r.Method == http.MethodGet && path == "/servers/101/message-streams":
-		writeList(w, "MessageStreams", streams(), r)
-	case r.Method == http.MethodGet && path == "/domains":
-		writeList(w, "Domains", domains(), r)
-	case r.Method == http.MethodGet && path == "/domains/501":
-		write(w, http.StatusOK, domains()[0])
-	case r.Method == http.MethodPost && path == "/domains/501/verifyDkim":
-		write(w, http.StatusOK, map[string]any{"DKIMVerified": true})
-	case r.Method == http.MethodPost && path == "/domains/501/verifySPF":
-		write(w, http.StatusOK, map[string]any{"SPFVerified": true})
-	case r.Method == http.MethodGet && path == "/senders":
-		writeList(w, "SenderSignatures", senders(), r)
-	case r.Method == http.MethodGet && path == "/senders/601":
-		write(w, http.StatusOK, senders()[0])
-	case r.Method == http.MethodGet && path == "/webhooks":
-		writeList(w, "Webhooks", webhooks(), r)
-	case r.Method == http.MethodGet && path == "/webhooks/701":
-		write(w, http.StatusOK, webhooks()[0])
-	case r.Method == http.MethodGet && path == "/deliverystats":
-		write(w, http.StatusOK, map[string]any{"InactiveMails": 2, "Bounces": []any{map[string]any{"Type": "HardBounce", "Name": "Hard bounce", "Count": 1}}})
-	case r.Method == http.MethodGet && path == "/messages/outbound":
-		writeList(w, "Messages", filterMessages(r), r)
-	case r.Method == http.MethodGet && path == "/messages/outbound/opens":
-		writeList(w, "Opens", opens(), r)
-	case r.Method == http.MethodGet && path == "/messages/outbound/opens/msg-1":
-		writeList(w, "Opens", opens(), r)
-	case r.Method == http.MethodGet && path == "/messages/outbound/clicks":
-		writeList(w, "Clicks", clicks(), r)
-	case r.Method == http.MethodGet && path == "/messages/outbound/clicks/msg-1":
-		writeList(w, "Clicks", clicks(), r)
-	case r.Method == http.MethodGet && path == "/messages/outbound/msg-1/details":
-		write(w, http.StatusOK, messages()[0])
-	case r.Method == http.MethodGet && path == "/messages/outbound/msg-1/dump":
-		write(w, http.StatusOK, map[string]any{"Body": "raw outbound message with recipient user@example.com"})
-	case r.Method == http.MethodGet && path == "/messages/inbound":
-		writeList(w, "InboundMessages", inboundMessages(), r)
-	case r.Method == http.MethodGet && path == "/messages/inbound/in-1/details":
-		write(w, http.StatusOK, map[string]any{"MessageID": "in-1", "From": "reply@example.com", "To": "support@example.com", "TextBody": "hello"})
-	case r.Method == http.MethodPut && path == "/messages/inbound/in-1/retry":
-		write(w, http.StatusOK, map[string]any{"MessageID": "in-1", "Status": "Queued"})
-	case r.Method == http.MethodPut && path == "/messages/inbound/in-1/bypass":
-		write(w, http.StatusOK, map[string]any{"MessageID": "in-1", "Status": "Bypassed"})
-	case r.Method == http.MethodGet && path == "/bounces":
-		writeList(w, "Bounces", filterBounces(r), r)
-	case r.Method == http.MethodGet && path == "/bounces/9001":
-		write(w, http.StatusOK, bounces()[0])
-	case r.Method == http.MethodGet && path == "/bounces/9001/dump":
-		write(w, http.StatusOK, map[string]any{"Body": "smtp bounce dump with recipient user@example.com"})
-	case r.Method == http.MethodPut && path == "/bounces/9001/activate":
-		write(w, http.StatusOK, map[string]any{"Message": "OK", "BounceID": 9001})
-	case r.Method == http.MethodGet && path == "/message-streams/outbound/suppressions/dump":
-		writeList(w, "Suppressions", suppressions(), r)
-	case r.Method == http.MethodPost && path == "/message-streams/outbound/suppressions":
-		write(w, http.StatusOK, map[string]any{"Status": "created", "EmailAddress": "manual@example.com"})
-	case r.Method == http.MethodPost && path == "/message-streams/outbound/suppressions/delete":
-		write(w, http.StatusOK, map[string]any{"Status": "deleted"})
-	default:
-		write(w, http.StatusNotFound, map[string]any{"ErrorCode": 12, "Message": "No mock route for " + r.Method + " " + r.URL.Path})
+	for _, route := range mockRoutes() {
+		if r.Method == route.method && path == route.path {
+			route.handle(w, r)
+			return
+		}
 	}
+	write(w, http.StatusNotFound, map[string]any{"ErrorCode": 12, "Message": "No mock route for " + r.Method + " " + r.URL.Path})
+}
+
+type route struct {
+	method  string
+	path    string
+	display string
+	handle  func(http.ResponseWriter, *http.Request)
+}
+
+func mockRoutes() []route {
+	return []route{
+		listRoute(http.MethodGet, "/servers", "Servers", staticList(servers)),
+		itemRoute(http.MethodGet, "/servers/101", "GET  /servers/{id}", func() any { return servers()[0] }),
+		listRoute(http.MethodGet, "/servers/101/message-streams", "MessageStreams", staticList(streams), display("GET  /servers/{id}/message-streams")),
+		listRoute(http.MethodGet, "/domains", "Domains", staticList(domains)),
+		itemRoute(http.MethodGet, "/domains/501", "GET  /domains/{id}", func() any { return domains()[0] }),
+		itemRoute(http.MethodPost, "/domains/501/verifyDkim", "POST /domains/{id}/verifyDkim", func() any { return map[string]any{"DKIMVerified": true} }),
+		itemRoute(http.MethodPost, "/domains/501/verifySPF", "POST /domains/{id}/verifySPF", func() any { return map[string]any{"SPFVerified": true} }),
+		listRoute(http.MethodGet, "/senders", "SenderSignatures", staticList(senders)),
+		itemRoute(http.MethodGet, "/senders/601", "GET  /senders/{id}", func() any { return senders()[0] }),
+		listRoute(http.MethodGet, "/webhooks", "Webhooks", staticList(webhooks)),
+		itemRoute(http.MethodGet, "/webhooks/701", "GET  /webhooks/{id}", func() any { return webhooks()[0] }),
+		itemRoute(http.MethodGet, "/deliverystats", "GET  /deliverystats", func() any {
+			return map[string]any{"InactiveMails": 2, "Bounces": []any{map[string]any{"Type": "HardBounce", "Name": "Hard bounce", "Count": 1}}}
+		}),
+		listRoute(http.MethodGet, "/messages/outbound", "Messages", filterMessages),
+		listRoute(http.MethodGet, "/messages/outbound/opens", "Opens", staticList(opens)),
+		listRoute(http.MethodGet, "/messages/outbound/opens/msg-1", "Opens", staticList(opens), display("GET  /messages/outbound/opens/{id}")),
+		listRoute(http.MethodGet, "/messages/outbound/clicks", "Clicks", staticList(clicks)),
+		listRoute(http.MethodGet, "/messages/outbound/clicks/msg-1", "Clicks", staticList(clicks), display("GET  /messages/outbound/clicks/{id}")),
+		itemRoute(http.MethodGet, "/messages/outbound/msg-1/details", "GET  /messages/outbound/{id}/details", func() any { return messages()[0] }),
+		itemRoute(http.MethodGet, "/messages/outbound/msg-1/dump", "GET  /messages/outbound/{id}/dump", func() any {
+			return map[string]any{"Body": "raw outbound message with recipient user@example.com"}
+		}),
+		listRoute(http.MethodGet, "/messages/inbound", "InboundMessages", staticList(inboundMessages)),
+		itemRoute(http.MethodGet, "/messages/inbound/in-1/details", "GET  /messages/inbound/{id}/details", func() any {
+			return map[string]any{"MessageID": "in-1", "From": "reply@example.com", "To": "support@example.com", "TextBody": "hello"}
+		}),
+		itemRoute(http.MethodPut, "/messages/inbound/in-1/retry", "PUT  /messages/inbound/{id}/retry", func() any {
+			return map[string]any{"MessageID": "in-1", "Status": "Queued"}
+		}),
+		itemRoute(http.MethodPut, "/messages/inbound/in-1/bypass", "PUT  /messages/inbound/{id}/bypass", func() any {
+			return map[string]any{"MessageID": "in-1", "Status": "Bypassed"}
+		}),
+		listRoute(http.MethodGet, "/bounces", "Bounces", filterBounces),
+		itemRoute(http.MethodGet, "/bounces/9001", "GET  /bounces/{id}", func() any { return bounces()[0] }),
+		itemRoute(http.MethodGet, "/bounces/9001/dump", "GET  /bounces/{id}/dump", func() any {
+			return map[string]any{"Body": "smtp bounce dump with recipient user@example.com"}
+		}),
+		itemRoute(http.MethodPut, "/bounces/9001/activate", "PUT  /bounces/{id}/activate", func() any {
+			return map[string]any{"Message": "OK", "BounceID": 9001}
+		}),
+		listRoute(http.MethodGet, "/message-streams/outbound/suppressions/dump", "Suppressions", staticList(suppressions), display("GET  /message-streams/{stream}/suppressions/dump")),
+		itemRoute(http.MethodPost, "/message-streams/outbound/suppressions", "POST /message-streams/{stream}/suppressions", func() any {
+			return map[string]any{"Status": "created", "EmailAddress": "manual@example.com"}
+		}),
+		itemRoute(http.MethodPost, "/message-streams/outbound/suppressions/delete", "POST /message-streams/{stream}/suppressions/delete", func() any {
+			return map[string]any{"Status": "deleted"}
+		}),
+	}
+}
+
+type routeOption func(*route)
+
+func display(value string) routeOption {
+	return func(route *route) {
+		route.display = value
+	}
+}
+
+func staticList(items func() []any) func(*http.Request) []any {
+	return func(*http.Request) []any {
+		return items()
+	}
+}
+
+func listRoute(method, path, field string, items func(*http.Request) []any, opts ...routeOption) route {
+	route := route{
+		method:  method,
+		path:    path,
+		display: displayPath(method, path),
+		handle: func(w http.ResponseWriter, r *http.Request) {
+			writeList(w, field, items(r), r)
+		},
+	}
+	for _, opt := range opts {
+		opt(&route)
+	}
+	return route
+}
+
+func itemRoute(method, path, display string, item func() any) route {
+	return route{
+		method:  method,
+		path:    path,
+		display: display,
+		handle: func(w http.ResponseWriter, r *http.Request) {
+			write(w, http.StatusOK, item())
+		},
+	}
+}
+
+func displayPath(method, path string) string {
+	spacing := " "
+	if len(method) == 3 {
+		spacing = "  "
+	}
+	return method + spacing + path
 }
 
 func servers() []any {

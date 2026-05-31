@@ -185,3 +185,6 @@ Implemented investigation commands:
   missing auth, invalid auth, pagination, redaction, and common delivery/bounce
   records.
 - Prefer e2e smoke tests against the mock for CLI command contracts.
+
+See `design-docs/architecture.md` for the current package layout and extension
+points.

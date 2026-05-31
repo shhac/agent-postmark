@@ -161,6 +161,9 @@ func TestWebhookHealthFinding(t *testing.T) {
 	if !strings.Contains(stdout, `"type":"finding"`) || !strings.Contains(stdout, `"severity":"ok"`) {
 		t.Fatalf("stdout = %s", stdout)
 	}
+	if !strings.Contains(stdout, `"coverage":{"bounce":1,"delivery":1`) {
+		t.Fatalf("stdout missing coverage summary = %s", stdout)
+	}
 }
 
 func TestInvestigateBounce(t *testing.T) {

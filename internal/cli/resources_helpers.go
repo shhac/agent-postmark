@@ -146,30 +146,10 @@ func addIfSet(q url.Values, key, value string) {
 }
 
 func writeWebhookHealth(raw json.RawMessage, format string) error {
-	var payload struct {
-		Webhooks []map[string]any `json:"Webhooks"`
-	}
-	_ = json.Unmarshal(raw, &payload)
-	rows := make([]json.RawMessage, 0, len(payload.Webhooks)+1)
-	coverage := map[string]int{"delivery": 0, "bounce": 0, "inbound": 0, "spam_complaint": 0}
-	for _, hook := range payload.Webhooks {
-		triggers, _ := hook["Triggers"].(map[string]any)
-		for key, value := range triggers {
-			enabled, _ := value.(bool)
-			if !enabled {
-				continue
-			}
-			switch key {
-			case "Delivery":
-				coverage["delivery"]++
-			case "Bounce":
-				coverage["bounce"]++
-			case "Inbound":
-				coverage["inbound"]++
-			case "SpamComplaint":
-				coverage["spam_complaint"]++
-			}
-		}
+	webhooks := rawEnvelopeList(raw, "Webhooks")
+	rows := make([]json.RawMessage, 0, len(webhooks)+1)
+	for _, row := range webhooks {
+		hook := rawObject(row)
 		row, _ := json.Marshal(map[string]any{
 			"type":           "entity",
 			"object":         "webhook",
@@ -179,18 +159,12 @@ func writeWebhookHealth(raw json.RawMessage, format string) error {
 		})
 		rows = append(rows, row)
 	}
-	severity := "ok"
-	summary := "Webhook coverage includes delivery and bounce triggers."
-	if coverage["delivery"] == 0 || coverage["bounce"] == 0 {
-		severity = "warning"
-		summary = "Webhook coverage is missing delivery or bounce triggers."
+	finding := webhookCoverageFinding(webhookCoverage(webhooks))
+	if data, ok := finding["data"].(map[string]any); ok {
+		finding["coverage"] = data["coverage"]
+		delete(finding, "data")
 	}
-	finding, _ := json.Marshal(map[string]any{
-		"type":     "finding",
-		"severity": severity,
-		"summary":  summary,
-		"coverage": coverage,
-	})
-	rows = append(rows, finding)
+	rawFinding, _ := json.Marshal(finding)
+	rows = append(rows, rawFinding)
 	return writeList(rows, len(rows), 0, len(rows), "WebhookHealth", format, true)
 }
