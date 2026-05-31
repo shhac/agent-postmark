@@ -47,14 +47,16 @@ func registerAuthAdd(parent *cobra.Command) {
 				if wantAccount && accountToken == "" {
 					accountToken, err = promptSecret(cmd.Context(), "agent-postmark: "+alias, "Postmark account token", "")
 					if err != nil {
-						output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman))
+						output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman).
+							WithHint("Run this command in a local graphical session, or omit --form and provide --account-token-value in a human-controlled terminal."))
 						return nil
 					}
 				}
 				if wantServer && serverToken == "" {
 					serverToken, err = promptSecret(cmd.Context(), "agent-postmark: "+alias, "Postmark server token", "")
 					if err != nil {
-						output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman))
+						output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman).
+							WithHint("Run this command in a local graphical session, or omit --form and provide --server-token-value in a human-controlled terminal."))
 						return nil
 					}
 				}
@@ -89,7 +91,8 @@ func registerAuthAdd(parent *cobra.Command) {
 				stored["server_token"] = storage
 			}
 			if err := config.StoreProfile(alias, config.Profile{Host: host, DefaultServer: serverID, MessageStream: stream}); err != nil {
-				output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman))
+				output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman).
+					WithHint("Check config directory permissions and retry."))
 				return nil
 			}
 			cfg := config.Read()
@@ -132,7 +135,8 @@ func registerAuthUpdate(parent *cobra.Command) {
 				if updateAccount {
 					filled, err := promptSecret(cmd.Context(), "agent-postmark: "+alias, "Postmark account token", "")
 					if err != nil {
-						output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman))
+						output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman).
+							WithHint("Run this command in a local graphical session, or omit --form and provide --account-token-value in a human-controlled terminal."))
 						return nil
 					}
 					accountToken = filled
@@ -140,7 +144,8 @@ func registerAuthUpdate(parent *cobra.Command) {
 				if updateServer {
 					filled, err := promptSecret(cmd.Context(), "agent-postmark: "+alias, "Postmark server token", "")
 					if err != nil {
-						output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman))
+						output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman).
+							WithHint("Run this command in a local graphical session, or omit --form and provide --server-token-value in a human-controlled terminal."))
 						return nil
 					}
 					serverToken = filled
@@ -148,21 +153,25 @@ func registerAuthUpdate(parent *cobra.Command) {
 			}
 			if updateAccount {
 				if accountToken == "" {
-					output.WriteError(output.Stderr(), agenterrors.New("missing --account-token-value", agenterrors.FixableByAgent))
+					output.WriteError(output.Stderr(), agenterrors.New("missing --account-token-value", agenterrors.FixableByAgent).
+						WithHint("Use 'agent-postmark profiles update <profile> --form --account-token' so the token never appears in chat."))
 					return nil
 				}
 				if _, err := credential.Store(alias, credential.AccountToken, accountToken); err != nil {
-					output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman))
+					output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman).
+						WithHint("The account token was not written to Keychain. Fix Keychain access and retry with --form."))
 					return nil
 				}
 			}
 			if updateServer {
 				if serverToken == "" {
-					output.WriteError(output.Stderr(), agenterrors.New("missing --server-token-value", agenterrors.FixableByAgent))
+					output.WriteError(output.Stderr(), agenterrors.New("missing --server-token-value", agenterrors.FixableByAgent).
+						WithHint("Use 'agent-postmark profiles update <profile> --form --server-token' so the token never appears in chat."))
 					return nil
 				}
 				if _, err := credential.Store(alias, credential.ServerToken, serverToken); err != nil {
-					output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman))
+					output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman).
+						WithHint("The server token was not written to Keychain. Fix Keychain access and retry with --form."))
 					return nil
 				}
 			}
@@ -190,7 +199,8 @@ func registerAuthUpdate(parent *cobra.Command) {
 			}
 			if setDefault {
 				if err := config.SetDefault(alias); err != nil {
-					output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman))
+					output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman).
+						WithHint("Run 'agent-postmark profiles list' to see configured profiles."))
 					return nil
 				}
 			}
@@ -275,7 +285,8 @@ func registerAuthDefault(parent *cobra.Command) {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := config.SetDefault(args[0]); err != nil {
-				output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman))
+				output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman).
+					WithHint("Run 'agent-postmark profiles list' to see configured profiles."))
 				return nil
 			}
 			return writeItem(map[string]any{"status": "default_set", "profile": args[0]}, "")
@@ -314,11 +325,13 @@ func registerAuthRemove(parent *cobra.Command) {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := credential.Remove(args[0]); err != nil {
-				output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman))
+				output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman).
+					WithHint("Run 'agent-postmark profiles list' to see configured profiles."))
 				return nil
 			}
 			if err := config.RemoveProfile(args[0]); err != nil {
-				output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman))
+				output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByHuman).
+					WithHint("Run 'agent-postmark profiles list' to see configured profiles."))
 				return nil
 			}
 			return writeItem(map[string]any{"status": "removed", "profile": args[0]}, "")

@@ -33,11 +33,13 @@ func registerConfig(root *cobra.Command) {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			value, err := strconv.Atoi(args[1])
 			if err != nil {
-				output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByAgent))
+				output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByAgent).
+					WithHint("Config values must be integers, for example 'agent-postmark config set timeout_ms 30000'."))
 				return nil
 			}
 			if err := config.SetDefaultValue(args[0], value); err != nil {
-				output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByAgent))
+				output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByAgent).
+					WithHint("Supported config keys are timeout_ms and max_retries."))
 				return nil
 			}
 			return writeItem(map[string]any{"status": "set", "key": args[0], "value": value}, "")
@@ -49,7 +51,8 @@ func registerConfig(root *cobra.Command) {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := config.UnsetDefaultValue(args[0]); err != nil {
-				output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByAgent))
+				output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByAgent).
+					WithHint("Supported config keys are timeout_ms and max_retries."))
 				return nil
 			}
 			return writeItem(map[string]any{"status": "unset", "key": args[0]}, "")

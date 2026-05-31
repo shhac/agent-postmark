@@ -22,14 +22,16 @@ func registerAPI(root *cobra.Command, globals *GlobalFlags) {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := args[0]
 			if !strings.HasPrefix(path, "/") {
-				output.WriteError(output.Stderr(), agenterrors.New("raw API paths must start with /", agenterrors.FixableByAgent))
+				output.WriteError(output.Stderr(), agenterrors.New("raw API paths must start with /", agenterrors.FixableByAgent).
+					WithHint("Use a Postmark API path such as '/bounces' or '/domains'."))
 				return nil
 			}
 			kind := api.ServerToken
 			if tokenKind == "account" {
 				kind = api.AccountToken
 			} else if tokenKind != "server" {
-				output.WriteError(output.Stderr(), agenterrors.New("unknown --token, expected server or account", agenterrors.FixableByAgent))
+				output.WriteError(output.Stderr(), agenterrors.New("unknown --token, expected server or account", agenterrors.FixableByAgent).
+					WithHint("Use '--token server' for messages/bounces/webhooks/stats or '--token account' for servers/domains/signatures."))
 				return nil
 			}
 			return withClient(cmd.Context(), globals, func(ctx context.Context, resolved *resolvedContext) error {

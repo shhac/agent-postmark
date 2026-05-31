@@ -78,7 +78,8 @@ func (c *Client) do(ctx context.Context, method string, kind TokenKind, path str
 	if body != nil {
 		payload, err = json.Marshal(body)
 		if err != nil {
-			return nil, agenterrors.Wrap(err, agenterrors.FixableByAgent)
+			return nil, agenterrors.Wrap(err, agenterrors.FixableByAgent).
+				WithHint("The CLI built an invalid JSON request body. Check command flags and report this if the command is typed.")
 		}
 	}
 
@@ -107,7 +108,8 @@ func (c *Client) do(ctx context.Context, method string, kind TokenKind, path str
 		raw, readErr := io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
 		if readErr != nil {
-			return nil, agenterrors.Wrap(readErr, agenterrors.FixableByRetry)
+			return nil, agenterrors.Wrap(readErr, agenterrors.FixableByRetry).
+				WithHint("Postmark response could not be read. Retry the command.")
 		}
 		if c.Debug && c.DebugOut != nil {
 			_ = json.NewEncoder(c.DebugOut).Encode(map[string]any{
@@ -128,7 +130,8 @@ func (c *Client) do(ctx context.Context, method string, kind TokenKind, path str
 		}
 		return json.RawMessage(raw), nil
 	}
-	return nil, agenterrors.New("request failed after retries", agenterrors.FixableByRetry)
+	return nil, agenterrors.New("request failed after retries", agenterrors.FixableByRetry).
+		WithHint("Retry later, or reduce the request size if this was a list/search command.")
 }
 
 func (c *Client) newRequest(ctx context.Context, method string, kind TokenKind, path string, query url.Values, payload []byte) (*http.Request, error) {
@@ -154,7 +157,8 @@ func (c *Client) newRequest(ctx context.Context, method string, kind TokenKind, 
 	}
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), reader)
 	if err != nil {
-		return nil, agenterrors.Wrap(err, agenterrors.FixableByAgent)
+		return nil, agenterrors.Wrap(err, agenterrors.FixableByAgent).
+			WithHint("Check the Postmark host, path, and query parameters.")
 	}
 	req.Header.Set("Accept", "application/json")
 	if payload != nil {
@@ -199,7 +203,7 @@ func mapError(status int, raw []byte, kind TokenKind) error {
 	switch {
 	case status == http.StatusUnauthorized:
 		return agenterrors.New("Authentication failed: "+detail, agenterrors.FixableByHuman).
-			WithHint(fmt.Sprintf("This endpoint uses the Postmark %s token header. Check the profile with 'agent-postmark auth check <profile>'.", kind))
+			WithHint(fmt.Sprintf("This endpoint uses the Postmark %s token header. Check the profile with 'agent-postmark profiles check <profile>'.", kind))
 	case status == http.StatusForbidden:
 		return agenterrors.New("Permission denied: "+detail, agenterrors.FixableByHuman).
 			WithHint("The token may not have access to this Postmark server or account resource.")
@@ -210,9 +214,11 @@ func mapError(status int, raw []byte, kind TokenKind) error {
 		return agenterrors.New("Rate limited: "+detail, agenterrors.FixableByRetry).
 			WithHint("Wait and retry, or reduce --count/page size.")
 	case status >= 500:
-		return agenterrors.New(fmt.Sprintf("Postmark server error (%d): %s", status, detail), agenterrors.FixableByRetry)
+		return agenterrors.New(fmt.Sprintf("Postmark server error (%d): %s", status, detail), agenterrors.FixableByRetry).
+			WithHint("Retry later. If it persists, check Postmark status and narrow the request.")
 	default:
-		return agenterrors.New(detail, agenterrors.FixableByAgent)
+		return agenterrors.New(detail, agenterrors.FixableByAgent).
+			WithHint("Check command flags against 'agent-postmark usage' or use 'agent-postmark api get <path> --token server|account' to inspect the raw endpoint.")
 	}
 }
 
