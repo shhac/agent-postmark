@@ -29,13 +29,18 @@ func registerUsage(root *cobra.Command) {
 				},
 				"server_token_workflows": []string{
 					"agent-postmark messages inbound-search --from reply@example.com",
+					"agent-postmark messages dump <message-id>",
 					"agent-postmark messages opens --count 20",
+					"agent-postmark messages opens --message-id <message-id>",
 					"agent-postmark messages clicks --count 20",
+					"agent-postmark messages clicks --message-id <message-id>",
+					"agent-postmark bounces dump <bounce-id>",
 					"agent-postmark suppressions dump --stream outbound",
 					"agent-postmark webhooks health",
 				},
 				"mutations": []string{
 					"agent-postmark domains verify-dkim <domain-id> --yes",
+					"agent-postmark bounces activate <bounce-id> --yes",
 					"agent-postmark suppressions create user@example.com --yes",
 					"agent-postmark suppressions delete user@example.com --yes",
 					"agent-postmark messages inbound-retry <message-id> --yes",

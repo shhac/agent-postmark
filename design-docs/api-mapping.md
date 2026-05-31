@@ -42,13 +42,18 @@ Sources:
 | `messages search` | `GET /messages/outbound` | NDJSON rows from `Messages`. |
 | `messages inbound-search` | `GET /messages/inbound` | NDJSON rows from `InboundMessages`. |
 | `messages opens` | `GET /messages/outbound/opens` | NDJSON rows from `Opens`. |
+| `messages opens --message-id <id>` | `GET /messages/outbound/opens/{id}` | NDJSON rows from `Opens`. |
 | `messages clicks` | `GET /messages/outbound/clicks` | NDJSON rows from `Clicks`. |
+| `messages clicks --message-id <id>` | `GET /messages/outbound/clicks/{id}` | NDJSON rows from `Clicks`. |
 | `messages get <id>` | `GET /messages/outbound/{id}/details` | Redacted JSON. |
+| `messages dump <id>` | `GET /messages/outbound/{id}/dump` | Redacted JSON; body redacted by default. |
 | `messages inbound-get <id>` | `GET /messages/inbound/{id}/details` | Redacted JSON. |
 | `messages inbound-retry <id> --yes` | `PUT /messages/inbound/{id}/retry` | Guarded mutation. |
 | `messages inbound-bypass <id> --yes` | `PUT /messages/inbound/{id}/bypass` | Guarded mutation. |
 | `bounces list` | `GET /bounces` | NDJSON rows from `Bounces`. |
 | `bounces get <id>` | `GET /bounces/{id}` | Redacted JSON. |
+| `bounces dump <id>` | `GET /bounces/{id}/dump` | Redacted JSON; body redacted by default. |
+| `bounces activate <id> --yes` | `PUT /bounces/{id}/activate` | Guarded mutation. |
 | `suppressions dump` | `GET /message-streams/{stream}/suppressions/dump` | NDJSON rows from `Suppressions`. |
 | `suppressions check <email>` | `GET /message-streams/{stream}/suppressions/dump?EmailAddress=...` | NDJSON rows from `Suppressions`. |
 | `suppressions create <email> --yes` | `POST /message-streams/{stream}/suppressions` | Guarded mutation. |

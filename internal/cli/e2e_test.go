@@ -205,3 +205,47 @@ func TestInvestigateWebhookHealth(t *testing.T) {
 		t.Fatalf("stdout = %s", stdout)
 	}
 }
+
+func TestMessageAndBounceDumpsRedactBodies(t *testing.T) {
+	stdout, stderr, _ := runCLI(t, "messages", "dump", "msg-1")
+	if stderr != "" {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if !strings.Contains(stdout, `"Body": "[REDACTED]"`) || strings.Contains(stdout, "user@example.com") {
+		t.Fatalf("stdout = %s", stdout)
+	}
+	stdout, stderr, _ = runCLI(t, "bounces", "dump", "9001")
+	if stderr != "" {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if !strings.Contains(stdout, `"Body": "[REDACTED]"`) || strings.Contains(stdout, "user@example.com") {
+		t.Fatalf("stdout = %s", stdout)
+	}
+}
+
+func TestSingleMessageOpensAndClicks(t *testing.T) {
+	stdout, stderr, _ := runCLI(t, "messages", "opens", "--message-id", "msg-1")
+	if stderr != "" {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if !strings.Contains(stdout, `"MessageID":"msg-1"`) || !strings.Contains(stdout, `"TotalOpens":1`) {
+		t.Fatalf("stdout = %s", stdout)
+	}
+	stdout, stderr, _ = runCLI(t, "messages", "clicks", "--message-id", "msg-1")
+	if stderr != "" {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if !strings.Contains(stdout, `"MessageID":"msg-1"`) || !strings.Contains(stdout, `"TotalClicks":1`) {
+		t.Fatalf("stdout = %s", stdout)
+	}
+}
+
+func TestBounceActivateRequiresYes(t *testing.T) {
+	_, stderr, doer := runCLI(t, "bounces", "activate", "9001")
+	if !strings.Contains(stderr, `"mutation requires --yes"`) {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if doer.calls != 0 {
+		t.Fatalf("activation should not call API without --yes, got %d calls", doer.calls)
+	}
+}

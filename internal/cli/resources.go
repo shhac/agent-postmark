@@ -179,6 +179,7 @@ func registerMessages(root *cobra.Command, globals *GlobalFlags) {
 	cmd.AddCommand(inboundSearch)
 
 	var opensCount, opensOffset int
+	var trackedMessageID string
 	opens := &cobra.Command{
 		Use:   "opens",
 		Short: "List outbound message opens",
@@ -188,7 +189,11 @@ func registerMessages(root *cobra.Command, globals *GlobalFlags) {
 				addIfSet(q, "fromdate", fromDate)
 				addIfSet(q, "todate", toDate)
 				addIfSet(q, "tag", tag)
-				raw, err := resolved.Client.Get(ctx, api.ServerToken, "/messages/outbound/opens", q)
+				path := "/messages/outbound/opens"
+				if trackedMessageID != "" {
+					path += "/" + trackedMessageID
+				}
+				raw, err := resolved.Client.Get(ctx, api.ServerToken, path, q)
 				if err != nil {
 					return err
 				}
@@ -199,6 +204,7 @@ func registerMessages(root *cobra.Command, globals *GlobalFlags) {
 	opens.Flags().StringVar(&fromDate, "fromdate", "", "Start datetime, Postmark format YYYY-MM-DDTHH:MM:SS")
 	opens.Flags().StringVar(&toDate, "todate", "", "End datetime, Postmark format YYYY-MM-DDTHH:MM:SS")
 	opens.Flags().StringVar(&tag, "tag", "", "Tag filter")
+	opens.Flags().StringVar(&trackedMessageID, "message-id", "", "Single message ID")
 	addCountOffsetFlags(opens, &opensCount, &opensOffset)
 	cmd.AddCommand(opens)
 
@@ -212,7 +218,11 @@ func registerMessages(root *cobra.Command, globals *GlobalFlags) {
 				addIfSet(q, "fromdate", fromDate)
 				addIfSet(q, "todate", toDate)
 				addIfSet(q, "tag", tag)
-				raw, err := resolved.Client.Get(ctx, api.ServerToken, "/messages/outbound/clicks", q)
+				path := "/messages/outbound/clicks"
+				if trackedMessageID != "" {
+					path += "/" + trackedMessageID
+				}
+				raw, err := resolved.Client.Get(ctx, api.ServerToken, path, q)
 				if err != nil {
 					return err
 				}
@@ -223,10 +233,12 @@ func registerMessages(root *cobra.Command, globals *GlobalFlags) {
 	clicks.Flags().StringVar(&fromDate, "fromdate", "", "Start datetime, Postmark format YYYY-MM-DDTHH:MM:SS")
 	clicks.Flags().StringVar(&toDate, "todate", "", "End datetime, Postmark format YYYY-MM-DDTHH:MM:SS")
 	clicks.Flags().StringVar(&tag, "tag", "", "Tag filter")
+	clicks.Flags().StringVar(&trackedMessageID, "message-id", "", "Single message ID")
 	addCountOffsetFlags(clicks, &clicksCount, &clicksOffset)
 	cmd.AddCommand(clicks)
 
 	cmd.AddCommand(serverGetCommand("get <message-id>", "Get outbound message details", globals, "/messages/outbound/%s/details"))
+	cmd.AddCommand(serverGetCommand("dump <message-id>", "Get redacted outbound message dump", globals, "/messages/outbound/%s/dump"))
 	cmd.AddCommand(serverGetCommand("inbound-get <message-id>", "Get inbound message details", globals, "/messages/inbound/%s/details"))
 	cmd.AddCommand(serverPutCommand("inbound-retry <message-id>", "Retry inbound message processing", globals, "/messages/inbound/%s/retry", "Retrying inbound processing can trigger downstream processing again."))
 	cmd.AddCommand(serverPutCommand("inbound-bypass <message-id>", "Bypass inbound message rules", globals, "/messages/inbound/%s/bypass", "Bypassing inbound rules can deliver a message that rules previously blocked."))
@@ -275,6 +287,8 @@ func registerBounces(root *cobra.Command, globals *GlobalFlags) {
 	addCountOffsetFlags(list, &count, &offset)
 	cmd.AddCommand(list)
 	cmd.AddCommand(serverGetCommand("get <bounce-id>", "Get a bounce", globals, "/bounces/%s"))
+	cmd.AddCommand(serverGetCommand("dump <bounce-id>", "Get redacted bounce dump", globals, "/bounces/%s/dump"))
+	cmd.AddCommand(serverPutCommand("activate <bounce-id>", "Reactivate a bounced recipient", globals, "/bounces/%s/activate", "Activating a bounce can allow future delivery to this recipient."))
 	root.AddCommand(cmd)
 }
 

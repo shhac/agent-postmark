@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"sort"
 	"strings"
 )
 
@@ -35,6 +36,7 @@ func redactRaw(raw json.RawMessage) json.RawMessage {
 	}
 	redacted, paths := redactValue(decoded, "")
 	if len(paths) > 0 {
+		sort.Strings(paths)
 		if m, ok := redacted.(map[string]any); ok {
 			m["@redacted"] = paths
 		}

@@ -59,8 +59,8 @@ agent-postmark
 ├── domains           list, get, verify-dkim, verify-spf
 ├── signatures        list, get
 ├── webhooks          list, get
-├── messages          search, inbound-search, opens, clicks, get, inbound-get, inbound-retry, inbound-bypass
-├── bounces           list, get
+├── messages          search, inbound-search, opens, clicks, get, dump, inbound-get, inbound-retry, inbound-bypass
+├── bounces           list, get, dump, activate
 ├── suppressions      dump, check, create, delete
 ├── stats             delivery
 ├── investigate       delivery, bounce, domain-health, stream-health, webhook-health
@@ -115,8 +115,8 @@ Postmark-native env aliases, then built-in defaults.
   tokens, and secrets are redacted by default.
 - Mutating commands require explicit `--yes` and return a human-fixable JSON
   error without it. This includes domain verification, suppression
-  create/delete, and inbound retry/bypass. Webhook edits, sending, and template
-  changes remain outside v1.
+  create/delete, bounce activation, and inbound retry/bypass. Webhook edits,
+  sending, and template changes remain outside v1.
 
 ## Output contract
 

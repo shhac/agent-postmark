@@ -30,14 +30,19 @@ func Routes() []string {
 		"GET  /deliverystats",
 		"GET  /messages/outbound",
 		"GET  /messages/outbound/opens",
+		"GET  /messages/outbound/opens/{id}",
 		"GET  /messages/outbound/clicks",
+		"GET  /messages/outbound/clicks/{id}",
 		"GET  /messages/outbound/{id}/details",
+		"GET  /messages/outbound/{id}/dump",
 		"GET  /messages/inbound",
 		"GET  /messages/inbound/{id}/details",
 		"PUT  /messages/inbound/{id}/retry",
 		"PUT  /messages/inbound/{id}/bypass",
 		"GET  /bounces",
 		"GET  /bounces/{id}",
+		"GET  /bounces/{id}/dump",
+		"PUT  /bounces/{id}/activate",
 		"GET  /message-streams/{stream}/suppressions/dump",
 		"POST /message-streams/{stream}/suppressions",
 		"POST /message-streams/{stream}/suppressions/delete",
@@ -102,10 +107,16 @@ func dispatch(w http.ResponseWriter, r *http.Request) {
 		writeList(w, "Messages", filterMessages(r), r)
 	case r.Method == http.MethodGet && path == "/messages/outbound/opens":
 		writeList(w, "Opens", opens(), r)
+	case r.Method == http.MethodGet && path == "/messages/outbound/opens/msg-1":
+		writeList(w, "Opens", opens(), r)
 	case r.Method == http.MethodGet && path == "/messages/outbound/clicks":
+		writeList(w, "Clicks", clicks(), r)
+	case r.Method == http.MethodGet && path == "/messages/outbound/clicks/msg-1":
 		writeList(w, "Clicks", clicks(), r)
 	case r.Method == http.MethodGet && path == "/messages/outbound/msg-1/details":
 		write(w, http.StatusOK, messages()[0])
+	case r.Method == http.MethodGet && path == "/messages/outbound/msg-1/dump":
+		write(w, http.StatusOK, map[string]any{"Body": "raw outbound message with recipient user@example.com"})
 	case r.Method == http.MethodGet && path == "/messages/inbound":
 		writeList(w, "InboundMessages", inboundMessages(), r)
 	case r.Method == http.MethodGet && path == "/messages/inbound/in-1/details":
@@ -118,6 +129,10 @@ func dispatch(w http.ResponseWriter, r *http.Request) {
 		writeList(w, "Bounces", filterBounces(r), r)
 	case r.Method == http.MethodGet && path == "/bounces/9001":
 		write(w, http.StatusOK, bounces()[0])
+	case r.Method == http.MethodGet && path == "/bounces/9001/dump":
+		write(w, http.StatusOK, map[string]any{"Body": "smtp bounce dump with recipient user@example.com"})
+	case r.Method == http.MethodPut && path == "/bounces/9001/activate":
+		write(w, http.StatusOK, map[string]any{"Message": "OK", "BounceID": 9001})
 	case r.Method == http.MethodGet && path == "/message-streams/outbound/suppressions/dump":
 		writeList(w, "Suppressions", suppressions(), r)
 	case r.Method == http.MethodPost && path == "/message-streams/outbound/suppressions":

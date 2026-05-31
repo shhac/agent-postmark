@@ -51,9 +51,9 @@ Errors are JSON on stderr:
 Commands that can change Postmark state require `--yes`:
 
 - domain DKIM/SPF verification
+- bounce activation
 - suppression create/delete
 - inbound retry/bypass
 
 The guard is intentionally `fixable_by:"human"` so an LLM does not silently add
 `--yes` without the user's request.
-

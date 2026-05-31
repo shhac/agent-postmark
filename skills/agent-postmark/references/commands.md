@@ -33,11 +33,15 @@ agent-postmark signatures get <signature-id>
 agent-postmark messages search --to user@example.com --stream outbound
 agent-postmark messages inbound-search --from reply@example.com
 agent-postmark messages get <message-id>
+agent-postmark messages dump <message-id>
 agent-postmark messages inbound-get <message-id>
 agent-postmark messages opens --count 20
+agent-postmark messages opens --message-id <message-id>
 agent-postmark messages clicks --count 20
+agent-postmark messages clicks --message-id <message-id>
 agent-postmark bounces list --email user@example.com
 agent-postmark bounces get <bounce-id>
+agent-postmark bounces dump <bounce-id>
 agent-postmark suppressions dump --stream outbound
 agent-postmark suppressions check user@example.com
 agent-postmark webhooks list
@@ -50,6 +54,7 @@ Guarded mutations:
 ```bash
 agent-postmark suppressions create user@example.com --yes
 agent-postmark suppressions delete user@example.com --yes
+agent-postmark bounces activate <bounce-id> --yes
 agent-postmark messages inbound-retry <message-id> --yes
 agent-postmark messages inbound-bypass <message-id> --yes
 ```
@@ -72,4 +77,3 @@ agent-postmark api get /domains --token account
 ```
 
 Raw API is GET-only in v1.
-

@@ -32,6 +32,7 @@ AGENT_POSTMARK_RUN_SUBPROCESS_E2E=1 go test ./internal/cli -run SubprocessE2E -c
 - Outbound message `msg-1` to `user@example.com`.
 - Inbound message `in-1`.
 - Bounce `9001`, hard bounce for `user@example.com`, inactive and activatable.
+- Redacted dump fixtures for `msg-1` and `9001`.
 - Open and click records for `msg-1`.
 - Suppression for `user@example.com` on the `outbound` stream.
 
@@ -44,3 +45,4 @@ AGENT_POSTMARK_RUN_SUBPROCESS_E2E=1 go test ./internal/cli -run SubprocessE2E -c
   prove redaction is working.
 - Guarded mutation fixtures return deterministic receipts after the CLI has
   enforced `--yes`.
+- Golden fixtures in `internal/cli/testdata` pin important NDJSON contracts.

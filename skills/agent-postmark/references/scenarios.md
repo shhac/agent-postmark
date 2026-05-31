@@ -15,6 +15,7 @@ Look for `Status`, `ReceivedAt`, message stream, and any bounce findings.
 ```bash
 agent-postmark bounces list --email user@example.com
 agent-postmark investigate bounce <bounce-id>
+agent-postmark bounces dump <bounce-id>
 agent-postmark suppressions check user@example.com
 ```
 
@@ -29,6 +30,9 @@ agent-postmark bounces list --email user@example.com --inactive true
 
 Do not remove suppressions unless the user explicitly asks and understands the
 delivery implications.
+
+Do not activate a bounce unless the user explicitly asks and understands that it
+may allow future delivery to that recipient.
 
 ## Is domain authentication broken?
 
@@ -61,4 +65,3 @@ agent-postmark messages search --to user@example.com --stream broadcasts
 
 Use `profiles update --stream <stream>` only when the user wants the profile
 default changed.
-

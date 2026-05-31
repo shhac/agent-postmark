@@ -54,8 +54,12 @@ inside one server, including messages, bounces, delivery stats, and webhooks.
 
 ```bash
 agent-postmark messages inbound-search --from reply@example.com
+agent-postmark messages dump <message-id>
 agent-postmark messages opens --count 20
+agent-postmark messages opens --message-id <message-id>
 agent-postmark messages clicks --count 20
+agent-postmark messages clicks --message-id <message-id>
+agent-postmark bounces dump <bounce-id>
 agent-postmark suppressions dump --stream outbound
 agent-postmark suppressions check user@example.com
 agent-postmark webhooks health
@@ -66,6 +70,7 @@ State-changing commands require `--yes`:
 
 ```bash
 agent-postmark domains verify-dkim 501 --yes
+agent-postmark bounces activate 9001 --yes
 agent-postmark suppressions create user@example.com --yes
 agent-postmark suppressions delete user@example.com --yes
 agent-postmark messages inbound-retry in-1 --yes
