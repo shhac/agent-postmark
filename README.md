@@ -1,0 +1,95 @@
+# agent-postmark
+
+Postmark delivery triage CLI for AI agents. It is designed for read-heavy
+investigation workflows where an LLM needs compact structured output, useful
+error hints, and no access to Postmark account or server tokens.
+
+## Features
+
+- Keychain-first profiles: account and server tokens are never printed back.
+- Postmark-aware scope model: profiles can hold account token, server token,
+  default server ID, and default message stream.
+- `profiles` primary command with hidden `auth` alias for sibling CLI familiarity.
+- LLM-shaped output: lists default to NDJSON, single resources default to JSON.
+- Structured errors: stderr JSON includes `fixable_by: agent|human|retry`.
+- Redaction: message bodies, headers, attachments, recipients, sender addresses,
+  tokens, and secrets are redacted by default.
+- Mock server: `mockpostmark` provides deterministic e2e fixtures.
+- Agent onboarding: ships with `skills/agent-postmark/SKILL.md`.
+
+## Quick Start
+
+```bash
+make build
+./agent-postmark profiles add prod --form --account-token --server-token --server 123 --stream outbound
+./agent-postmark profiles check prod
+./agent-postmark servers list
+./agent-postmark streams list --server 123
+./agent-postmark messages search --to user@example.com --count 20
+./agent-postmark bounces list --email user@example.com
+./agent-postmark suppressions check user@example.com
+./agent-postmark webhooks health
+./agent-postmark investigate delivery --email user@example.com
+```
+
+When an LLM is guiding setup, prefer `--form`. A native OS dialog asks the user
+for account and/or server tokens, and the CLI returns only a redacted receipt.
+
+`auth` is a hidden compatibility alias:
+
+```bash
+agent-postmark auth list
+```
+
+## Token Scopes
+
+Postmark account tokens are used for account-level resources like servers,
+domains, and sender signatures. Server tokens are used for delivery activity
+inside one server, including messages, bounces, delivery stats, and webhooks.
+
+## Operational Commands
+
+```bash
+agent-postmark messages inbound-search --from reply@example.com
+agent-postmark messages opens --count 20
+agent-postmark messages clicks --count 20
+agent-postmark suppressions dump --stream outbound
+agent-postmark suppressions check user@example.com
+agent-postmark webhooks health
+```
+
+State-changing commands require `--yes`:
+
+```bash
+agent-postmark domains verify-dkim 501 --yes
+agent-postmark suppressions create user@example.com --yes
+agent-postmark suppressions delete user@example.com --yes
+agent-postmark messages inbound-retry in-1 --yes
+```
+
+## Development
+
+```bash
+make test
+make vet
+make build
+make build-mock
+make mock
+make mock-dev ARGS="messages search --to user@example.com"
+```
+
+## Mock Postmark
+
+```bash
+make build-mock
+./mockpostmark --routes
+./mockpostmark --addr 127.0.0.1:12122
+AGENT_POSTMARK_BASE_URL=http://127.0.0.1:12122 \
+  AGENT_POSTMARK_ACCOUNT_TOKEN=account_mock \
+  AGENT_POSTMARK_SERVER_TOKEN=server_mock \
+  ./agent-postmark servers list
+```
+
+## License
+
+MIT

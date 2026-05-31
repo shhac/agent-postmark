@@ -1,0 +1,6 @@
+/agent-postmark
+/mockpostmark
+/dist/
+/.cache/
+coverage.out
+.DS_Store
