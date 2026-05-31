@@ -54,6 +54,11 @@ Sources:
 | `suppressions create <email> --yes` | `POST /message-streams/{stream}/suppressions` | Guarded mutation. |
 | `suppressions delete <email> --yes` | `POST /message-streams/{stream}/suppressions/delete` | Guarded mutation. |
 | `stats delivery` | `GET /deliverystats` | JSON. |
+| `investigate delivery` | `GET /messages/outbound`, `GET /bounces` | Evidence NDJSON. |
+| `investigate bounce <id>` | `GET /bounces/{id}`, optional `GET /messages/outbound/{id}/details` | Evidence NDJSON. |
+| `investigate domain-health <domain>` | `GET /domains` or `GET /domains/{id}`, `GET /senders` | Evidence NDJSON. |
+| `investigate stream-health` | `GET /deliverystats`, `GET /bounces`, `GET /webhooks`, `GET /message-streams/{stream}/suppressions/dump` | Evidence NDJSON. |
+| `investigate webhook-health` | `GET /webhooks` | Evidence NDJSON. |
 | `api get <path> --token server|account` | raw `GET` only | Redacted JSON. |
 
 ## Query parameter conventions

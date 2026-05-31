@@ -30,8 +30,9 @@ these steps exactly.
    ```bash
    make test
    go vet ./...
+   AGENT_POSTMARK_RUN_SUBPROCESS_E2E=1 go test ./internal/cli -run SubprocessE2E -count=1
    ```
-   If either fails, stop and fix.
+   If any command fails, stop and fix.
 5. Determine the current version from the latest git tag:
    ```bash
    current=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
@@ -63,15 +64,9 @@ git tag "v${new_version}"
 git push origin main "v${new_version}"
 ```
 
-### Step 2: Build
+### Step 2: Build manually
 
-Preferred path:
-
-```bash
-goreleaser release --clean
-```
-
-If `goreleaser` is not installed, build manually:
+Releases for this repo are manual. Do not use GoReleaser for `agent-postmark`.
 
 ```bash
 rm -rf dist/
@@ -98,15 +93,7 @@ Smoke-test the native binary:
 ./dist/agent-postmark-darwin-arm64 usage
 ```
 
-### Step 3: Create GitHub release
-
-If GoReleaser created the GitHub release, verify it and skip manual create:
-
-```bash
-gh release view "v${new_version}"
-```
-
-Otherwise:
+### Step 3: Create GitHub release manually
 
 ```bash
 prev_tag=$(git tag --sort=-v:refname | head -2 | tail -1)
@@ -134,7 +121,7 @@ Then commit and push the tap:
 ```bash
 cd ../homebrew-tap
 git status --short
-git add Formula/agent-postmark.rb
+git hunk add --all --file Formula/agent-postmark.rb
 git commit -m "agent-postmark ${new_version}"
 git push
 cd -
@@ -149,4 +136,3 @@ Show the user:
 - Homebrew tap commit, if applicable
 - `brew install shhac/tap/agent-postmark`
 - `brew upgrade shhac/tap/agent-postmark`
-

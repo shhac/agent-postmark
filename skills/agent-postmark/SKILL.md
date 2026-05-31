@@ -45,6 +45,10 @@ Prefer `investigate` commands when the user asks an incident-style question:
 
 ```bash
 agent-postmark investigate delivery --email user@example.com
+agent-postmark investigate bounce <bounce-id>
+agent-postmark investigate domain-health example.com
+agent-postmark investigate stream-health --stream outbound
+agent-postmark investigate webhook-health
 agent-postmark messages search --to user@example.com --count 20
 agent-postmark bounces list --email user@example.com --count 20
 agent-postmark suppressions check user@example.com
@@ -104,3 +108,11 @@ Investigation output uses evidence records:
 
 Non-secret profile/config metadata lives in XDG config. Tokens live in Keychain.
 `profiles list` and `profiles check` show token presence but never token values.
+
+## Incremental References
+
+Load these only when you need more detail:
+
+- [references/commands.md](references/commands.md): command map and common flags.
+- [references/scenarios.md](references/scenarios.md): common support questions and command sequences.
+- [references/output.md](references/output.md): NDJSON, evidence records, redaction, errors, and mutation guards.

@@ -24,5 +24,5 @@ Postmark delivery triage CLI for AI agents.
 ```bash
 GOCACHE=/private/tmp/agent-postmark-go-build go test ./... -count=1
 GOCACHE=/private/tmp/agent-postmark-go-build go vet ./...
+AGENT_POSTMARK_RUN_SUBPROCESS_E2E=1 GOCACHE=/private/tmp/agent-postmark-go-build go test ./internal/cli -run SubprocessE2E -count=1
 ```
-

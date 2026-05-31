@@ -1,0 +1,59 @@
+# agent-postmark output
+
+## Formats
+
+- Lists default to NDJSON (`jsonl`).
+- Single resources default to JSON.
+- Investigations always emit NDJSON evidence records.
+- `--format yaml` is available for humans on most non-investigation commands.
+
+## Evidence Records
+
+Investigations emit:
+
+```json
+{"type":"entity","object":"bounce","id":9001,"data":{}}
+{"type":"finding","severity":"critical","summary":"Recipient is inactive because of this bounce; future delivery may be suppressed.","data":{}}
+{"type":"next_command","command":"agent-postmark suppressions check <email>","reason":"Check whether the bounced recipient is currently suppressed."}
+```
+
+Severities:
+
+- `ok`: no obvious issue in the checked surface.
+- `info`: relevant activity exists but is not necessarily a problem.
+- `warning`: likely issue or incomplete setup.
+- `critical`: delivery is probably blocked or suppressed.
+
+## Redaction
+
+The CLI redacts message body, subject, recipient/sender fields, headers,
+attachments, metadata, and any key containing token or secret.
+
+When possible, redacted resources include `@redacted` paths. Do not infer the
+redacted content.
+
+## Errors
+
+Errors are JSON on stderr:
+
+```json
+{"error":"mutation requires --yes","fixable_by":"human","hint":"Creating a suppression blocks future delivery to this recipient."}
+```
+
+`fixable_by` values:
+
+- `agent`: change arguments, IDs, streams, or command shape.
+- `human`: auth, permissions, setup, or confirmed mutation required.
+- `retry`: rate limits, network errors, or transient Postmark failures.
+
+## Mutation Guards
+
+Commands that can change Postmark state require `--yes`:
+
+- domain DKIM/SPF verification
+- suppression create/delete
+- inbound retry/bypass
+
+The guard is intentionally `fixable_by:"human"` so an LLM does not silently add
+`--yes` without the user's request.
+

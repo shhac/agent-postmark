@@ -1,0 +1,64 @@
+# agent-postmark scenarios
+
+## Did this email send?
+
+```bash
+agent-postmark investigate delivery --email user@example.com
+agent-postmark messages search --to user@example.com --stream outbound
+agent-postmark messages get <message-id>
+```
+
+Look for `Status`, `ReceivedAt`, message stream, and any bounce findings.
+
+## Did it bounce?
+
+```bash
+agent-postmark bounces list --email user@example.com
+agent-postmark investigate bounce <bounce-id>
+agent-postmark suppressions check user@example.com
+```
+
+Critical signals: `Inactive:true`, hard bounce type, and suppression rows.
+
+## Is this recipient suppressed or inactive?
+
+```bash
+agent-postmark suppressions check user@example.com
+agent-postmark bounces list --email user@example.com --inactive true
+```
+
+Do not remove suppressions unless the user explicitly asks and understands the
+delivery implications.
+
+## Is domain authentication broken?
+
+```bash
+agent-postmark investigate domain-health example.com
+agent-postmark domains get <domain-id>
+agent-postmark signatures list
+```
+
+If DNS has just been fixed, ask before running verification commands with
+`--yes`.
+
+## Are webhooks configured for delivery investigation?
+
+```bash
+agent-postmark investigate webhook-health
+agent-postmark webhooks list
+```
+
+At minimum, delivery and bounce triggers should usually be present for delivery
+support workflows.
+
+## Is this in the wrong stream?
+
+```bash
+agent-postmark streams list --server <server-id>
+agent-postmark investigate stream-health --stream outbound
+agent-postmark messages search --to user@example.com --stream broadcasts
+```
+
+Use `profiles update --stream <stream>` only when the user wants the profile
+default changed.
+

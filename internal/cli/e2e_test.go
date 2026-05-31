@@ -162,3 +162,46 @@ func TestWebhookHealthFinding(t *testing.T) {
 		t.Fatalf("stdout = %s", stdout)
 	}
 }
+
+func TestInvestigateBounce(t *testing.T) {
+	stdout, stderr, _ := runCLI(t, "investigate", "bounce", "9001")
+	if stderr != "" {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if !strings.Contains(stdout, `"object":"bounce"`) || !strings.Contains(stdout, `"severity":"critical"`) {
+		t.Fatalf("stdout = %s", stdout)
+	}
+	if strings.Contains(stdout, "user@example.com") {
+		t.Fatalf("sensitive content leaked: %s", stdout)
+	}
+}
+
+func TestInvestigateDomainHealth(t *testing.T) {
+	stdout, stderr, _ := runCLI(t, "investigate", "domain-health", "example.com")
+	if stderr != "" {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if !strings.Contains(stdout, `"object":"domain"`) || !strings.Contains(stdout, `"severity":"ok"`) {
+		t.Fatalf("stdout = %s", stdout)
+	}
+}
+
+func TestInvestigateStreamHealth(t *testing.T) {
+	stdout, stderr, _ := runCLI(t, "investigate", "stream-health", "--stream", "outbound")
+	if stderr != "" {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if !strings.Contains(stdout, `"object":"delivery_stats"`) || !strings.Contains(stdout, `"object":"suppressions"`) {
+		t.Fatalf("stdout = %s", stdout)
+	}
+}
+
+func TestInvestigateWebhookHealth(t *testing.T) {
+	stdout, stderr, _ := runCLI(t, "investigate", "webhook-health")
+	if stderr != "" {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if !strings.Contains(stdout, `"object":"webhooks"`) || !strings.Contains(stdout, `"severity":"ok"`) {
+		t.Fatalf("stdout = %s", stdout)
+	}
+}

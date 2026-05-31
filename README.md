@@ -30,6 +30,9 @@ make build
 ./agent-postmark suppressions check user@example.com
 ./agent-postmark webhooks health
 ./agent-postmark investigate delivery --email user@example.com
+./agent-postmark investigate bounce 9001
+./agent-postmark investigate domain-health example.com
+./agent-postmark investigate stream-health --stream outbound
 ```
 
 When an LLM is guiding setup, prefer `--form`. A native OS dialog asks the user
@@ -56,6 +59,7 @@ agent-postmark messages clicks --count 20
 agent-postmark suppressions dump --stream outbound
 agent-postmark suppressions check user@example.com
 agent-postmark webhooks health
+agent-postmark investigate webhook-health
 ```
 
 State-changing commands require `--yes`:
@@ -76,6 +80,7 @@ make build
 make build-mock
 make mock
 make mock-dev ARGS="messages search --to user@example.com"
+AGENT_POSTMARK_RUN_SUBPROCESS_E2E=1 go test ./internal/cli -run SubprocessE2E -count=1
 ```
 
 ## Mock Postmark

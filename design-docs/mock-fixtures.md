@@ -16,6 +16,12 @@ AGENT_POSTMARK_BASE_URL=http://127.0.0.1:12122 \
   ./agent-postmark servers list
 ```
 
+Full subprocess e2e is opt-in because some sandboxes cannot bind localhost:
+
+```bash
+AGENT_POSTMARK_RUN_SUBPROCESS_E2E=1 go test ./internal/cli -run SubprocessE2E -count=1
+```
+
 ## Current fixtures
 
 - Server `101`, named `Production`.

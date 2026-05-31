@@ -63,7 +63,7 @@ agent-postmark
 ├── bounces           list, get
 ├── suppressions      dump, check, create, delete
 ├── stats             delivery
-├── investigate       delivery
+├── investigate       delivery, bounce, domain-health, stream-health, webhook-health
 ├── api               get
 ├── config            show, path, set, unset
 └── usage
@@ -149,21 +149,33 @@ Classifications:
 
 ## Initial investigations
 
-`investigate delivery --email <address>` is the first high-level workflow. It
-  queries outbound messages and bounces for the active message stream, emits
-  compact redacted evidence records, and classifies likely outcomes such as no
-  matching activity, sent activity, bounce activity, or inactive recipient state.
+Investigation output uses three record types:
 
-Future investigation commands:
+```jsonl
+{"type":"entity","object":"bounce","id":9001,"data":{}}
+{"type":"finding","severity":"critical","summary":"Recipient is inactive because of this bounce; future delivery may be suppressed.","data":{}}
+{"type":"next_command","command":"agent-postmark suppressions check <email>","reason":"Check whether the bounced recipient is currently suppressed."}
+```
+
+Severities are `ok`, `info`, `warning`, and `critical`. `next_command` records
+are suggestions for the LLM to consider, not implicit permission to mutate state.
+
+`investigate delivery --email <address>` is the first high-level workflow. It
+queries outbound messages and bounces for the active message stream, emits
+compact redacted evidence records, and classifies likely outcomes such as no
+matching activity, sent activity, bounce activity, or inactive recipient state.
+
+Implemented investigation commands:
 
 - `investigate bounce <bounce-id>`: explain inactive/can-activate state and tie
   the bounce to the message.
 - `investigate domain-health <domain>`: inspect domain and sender signature
   DKIM/SPF/Return-Path state.
-- `webhooks health`: list webhooks and identify missing delivery, bounce,
-  inbound, or spam complaint triggers.
 - `investigate stream-health`: combine stats, recent bounces, and webhook state
   for one stream.
+- `investigate webhook-health`: list webhooks and identify missing delivery,
+  bounce, inbound, or spam complaint triggers. `webhooks health` remains a
+  shorter resource-oriented equivalent.
 
 ## Testing strategy
 
