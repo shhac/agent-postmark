@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -163,7 +164,7 @@ func writeList(items []json.RawMessage, total, offset, count int, resource, flag
 func queryPairs(values []string) url.Values {
 	q := url.Values{}
 	for _, pair := range values {
-		key, value, ok := stringsCut(pair, "=")
+		key, value, ok := strings.Cut(pair, "=")
 		if ok && key != "" {
 			q.Add(key, value)
 		}
@@ -197,13 +198,4 @@ func envInt(name string) int {
 func addCountOffsetFlags(cmd *cobra.Command, count *int, offset *int) {
 	cmd.Flags().IntVar(count, "count", 50, "Number of records to request")
 	cmd.Flags().IntVar(offset, "offset", 0, "Number of records to skip")
-}
-
-func stringsCut(s, sep string) (string, string, bool) {
-	for i := 0; i+len(sep) <= len(s); i++ {
-		if s[i:i+len(sep)] == sep {
-			return s[:i], s[i+len(sep):], true
-		}
-	}
-	return s, "", false
 }
