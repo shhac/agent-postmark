@@ -1,5 +1,8 @@
 # agent-postmark output
 
+Use this file when parsing command output, errors, redaction, or mutation
+guards. For command selection, use `scenarios.md` or `investigations.md`.
+
 ## Formats
 
 - Lists default to NDJSON (`jsonl`).

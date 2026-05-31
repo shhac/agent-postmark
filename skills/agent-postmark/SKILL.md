@@ -1,20 +1,21 @@
 ---
 name: agent-postmark
 description: |
-  Triage and investigate Postmark delivery, bounces, outbound and inbound messages, sender domains, sender signatures, message streams, webhooks, and server/account configuration. Use when:
-  - Explaining why an email did not arrive or bounced
-  - Checking Postmark message status, bounce state, or inactive recipients
+  Triage and investigate Postmark delivery, bounces, outbound and inbound messages, suppressions, sender domains, sender signatures, message streams, webhooks, and server/account configuration. Use when:
+  - Explaining why an email did not arrive, bounced, or was suppressed
+  - Checking Postmark message status, bounce state, inactive recipients, opens, clicks, or inbound processing
   - Inspecting sender domain, DKIM, SPF, Return-Path, or sender signature health
-  - Checking Postmark webhooks or message streams
-  - Looking up Postmark servers, bounces, messages, domains, signatures, or delivery stats
-  Triggers: "postmark", "email delivery", "bounce", "hard bounce", "message stream", "sender signature", "DKIM", "SPF", "Return-Path", "webhook delivery", "inactive recipient"
+  - Checking Postmark webhooks, message streams, servers, or delivery stats
+  - Looking up Postmark servers, bounces, messages, domains, signatures, suppressions, or webhook configuration
+  Triggers: "postmark", "email delivery", "bounce", "hard bounce", "suppression", "inactive recipient", "message stream", "sender signature", "DKIM", "SPF", "Return-Path", "webhook delivery", "inbound email", "email opens", "email clicks"
 allowed-tools: Bash(agent-postmark *) Bash(mockpostmark *) Read Grep Glob
 ---
 
 # agent-postmark
 
-Use `agent-postmark` when investigating Postmark delivery problems, bounces,
-message status, sender/domain configuration, message streams, or webhooks.
+Use `agent-postmark` for Postmark delivery incidents, bounce/suppression
+questions, message status, sender/domain configuration, message streams, and
+webhooks.
 
 ## Safety
 
@@ -25,11 +26,13 @@ message status, sender/domain configuration, message streams, or webhooks.
 - Use `agent-postmark profiles update <profile> --form --account-token` or
   `--server-token` when a stored token needs replacement.
 - Prefer read-only commands.
-- Remember the scope split: account-token commands handle servers, domains, and
-  signatures; server-token commands handle messages, bounces, stats, and
-  webhooks.
-- Treat message content and recipient data as sensitive. The CLI redacts these
-  fields by default.
+- Remember token scope: account-token commands handle servers, domains, streams,
+  and signatures; server-token commands handle messages, bounces, stats,
+  suppressions, and webhooks.
+- Treat message content and recipient/sender data as sensitive. The CLI redacts
+  these fields by default.
+- Do not add `--yes` to mutation commands unless the user explicitly asks for
+  that state change.
 
 ## Start Here
 
@@ -38,10 +41,10 @@ agent-postmark usage
 agent-postmark profiles list
 agent-postmark profiles check
 agent-postmark config show
-agent-postmark servers list
 ```
 
-Prefer `investigate` commands when the user asks an incident-style question:
+For incident-style questions, prefer investigations before low-level resource
+commands:
 
 ```bash
 agent-postmark investigate delivery --email user@example.com
@@ -49,48 +52,6 @@ agent-postmark investigate bounce <bounce-id>
 agent-postmark investigate domain-health example.com
 agent-postmark investigate stream-health --stream outbound
 agent-postmark investigate webhook-health
-agent-postmark messages search --to user@example.com --count 20
-agent-postmark bounces list --email user@example.com --count 20
-agent-postmark suppressions check user@example.com
-agent-postmark messages get <message-id>
-agent-postmark bounces get <bounce-id>
-```
-
-For configuration checks:
-
-```bash
-agent-postmark servers list
-agent-postmark streams list --server <server-id>
-agent-postmark domains list
-agent-postmark domains get <domain-id>
-agent-postmark signatures list
-agent-postmark webhooks list
-agent-postmark webhooks health
-agent-postmark stats delivery
-```
-
-Operational server-token commands:
-
-```bash
-agent-postmark messages inbound-search --from reply@example.com
-agent-postmark messages dump <message-id>
-agent-postmark messages opens --count 20
-agent-postmark messages opens --message-id <message-id>
-agent-postmark messages clicks --count 20
-agent-postmark messages clicks --message-id <message-id>
-agent-postmark bounces dump <bounce-id>
-agent-postmark suppressions dump --stream outbound
-```
-
-Mutation commands require explicit human confirmation with `--yes`. Do not run
-them unless the user asks for the state change:
-
-```bash
-agent-postmark domains verify-dkim <domain-id> --yes
-agent-postmark bounces activate <bounce-id> --yes
-agent-postmark suppressions create user@example.com --yes
-agent-postmark suppressions delete user@example.com --yes
-agent-postmark messages inbound-retry <message-id> --yes
 ```
 
 For local testing, run `mockpostmark` and set `AGENT_POSTMARK_BASE_URL`.
@@ -98,17 +59,18 @@ For local testing, run `mockpostmark` and set `AGENT_POSTMARK_BASE_URL`.
 ## Output
 
 Lists and investigations default to NDJSON. Single resources default to JSON.
-Errors include `fixable_by` and usually a `hint`.
+Errors are JSON on stderr with `error`, `fixable_by`, and usually `hint`.
 
 Sensitive fields are redacted with `"[REDACTED]"` and top-level `@redacted`
-paths when possible. Do not infer redacted message body or recipient details
-unless the user provides them out of band.
+paths when possible. Do not infer redacted message body, subject, recipient, or
+sender details unless the user provides them out of band.
 
-Investigation output uses evidence records:
+Investigations emit evidence records:
 
 ```json
-{"type":"entity","object":"messages_search","data":{}}
-{"type":"finding","severity":"info","summary":"..."}
+{"type":"entity","object":"bounce","id":9001,"data":{}}
+{"type":"finding","severity":"critical","summary":"...","data":{}}
+{"type":"next_command","command":"agent-postmark suppressions check <email>","reason":"..."}
 ```
 
 Non-secret profile/config metadata lives in XDG config. Tokens live in Keychain.
@@ -116,8 +78,9 @@ Non-secret profile/config metadata lives in XDG config. Tokens live in Keychain.
 
 ## Incremental References
 
-Load these only when you need more detail:
+Load only the reference needed for the current task:
 
-- [references/commands.md](references/commands.md): command map and common flags.
-- [references/scenarios.md](references/scenarios.md): common support questions and command sequences.
-- [references/output.md](references/output.md): NDJSON, evidence records, redaction, errors, and mutation guards.
+- [references/scenarios.md](references/scenarios.md): use when the user asks a support-style question and you need a command sequence.
+- [references/investigations.md](references/investigations.md): use when choosing or interpreting `investigate` commands.
+- [references/commands.md](references/commands.md): use when you need exact command syntax or flags.
+- [references/output.md](references/output.md): use when parsing NDJSON, errors, redaction, or mutation guards.

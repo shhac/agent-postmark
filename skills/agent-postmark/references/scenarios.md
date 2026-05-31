@@ -1,5 +1,9 @@
 # agent-postmark scenarios
 
+Use this file when the user asks a support-style question. For exact command
+syntax, use `commands.md`; for evidence interpretation, use `investigations.md`
+or `output.md`.
+
 ## Did this email send?
 
 ```bash

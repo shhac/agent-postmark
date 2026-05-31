@@ -1,5 +1,8 @@
 # agent-postmark command reference
 
+Use this file when you need exact command names, flags, or token scope. For
+support workflows, check `scenarios.md` or `investigations.md` first.
+
 ## Profiles
 
 ```bash
