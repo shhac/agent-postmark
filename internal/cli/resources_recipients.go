@@ -63,9 +63,8 @@ func registerSuppressions(root *cobra.Command, globals *GlobalFlags) {
 	var email, reason, origin, stream string
 	var count, offset int
 	list := &cobra.Command{
-		Use:     "list",
-		Aliases: []string{"dump"},
-		Short:   "List suppressions for a message stream",
+		Use:   "list",
+		Short: "List suppressions for a message stream",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return withClient(cmd.Context(), globals, func(ctx context.Context, resolved *resolvedContext) error {
 				if stream == "" {

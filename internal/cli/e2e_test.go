@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/shhac/agent-postmark/internal/api"
 	"github.com/shhac/agent-postmark/internal/config"
 	"github.com/shhac/agent-postmark/internal/mockpostmark"
@@ -278,13 +280,27 @@ func TestSuppressionsListUsesPaginatedListEndpoint(t *testing.T) {
 	}
 }
 
-func TestSuppressionsDumpAliasUsesPaginatedListEndpoint(t *testing.T) {
-	_, stderr, doer := runCLI(t, "suppressions", "dump", "--stream", "outbound", "--count", "1", "--offset", "0")
-	if stderr != "" {
-		t.Fatalf("stderr = %s", stderr)
+func TestSuppressionsDoesNotExposeDumpAlias(t *testing.T) {
+	cmd := newRootCmd("test")
+	var suppressions *cobra.Command
+	for _, child := range cmd.Commands() {
+		if child.Name() == "suppressions" {
+			suppressions = child
+			break
+		}
 	}
-	if len(doer.paths) != 1 || doer.paths[0] != "/message-streams/outbound/suppressions/list" {
-		t.Fatalf("paths = %#v", doer.paths)
+	if suppressions == nil {
+		t.Fatal("suppressions command not registered")
+	}
+	for _, child := range suppressions.Commands() {
+		if child.Name() == "dump" {
+			t.Fatal("suppressions dump should not be exposed")
+		}
+		for _, alias := range child.Aliases {
+			if alias == "dump" {
+				t.Fatalf("%s should not alias dump", child.Name())
+			}
+		}
 	}
 }
 

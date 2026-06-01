@@ -54,7 +54,7 @@ Sources:
 | `bounces get <id>` | `GET /bounces/{id}` | Redacted JSON. |
 | `bounces dump <id>` | `GET /bounces/{id}/dump` | Redacted JSON; body redacted by default. |
 | `bounces activate <id> --yes` | `PUT /bounces/{id}/activate` | Guarded mutation. |
-| `suppressions list` | `GET /message-streams/{stream}/suppressions/list` | NDJSON rows from `Suppressions`; Postmark returns `TotalCount` and honors `count`/`offset`. `suppressions dump` is retained as a compatibility alias. |
+| `suppressions list` | `GET /message-streams/{stream}/suppressions/list` | NDJSON rows from `Suppressions`; Postmark returns `TotalCount` and honors `count`/`offset`. |
 | `suppressions check <email>` | `GET /message-streams/{stream}/suppressions/list?EmailAddress=...` | NDJSON rows from `Suppressions`. |
 | `suppressions create <email> --yes` | `POST /message-streams/{stream}/suppressions` | Guarded mutation. |
 | `suppressions delete <email> --yes` | `POST /message-streams/{stream}/suppressions/delete` | Guarded mutation. |
@@ -71,6 +71,7 @@ Suppression endpoint probe notes:
 - Official docs currently document `GET /message-streams/{stream}/suppressions/dump` for reads, but live API also supports `GET /message-streams/{stream}/suppressions/list`.
 - `GET /message-streams/{stream}/suppressions/list` returned `TotalCount`, honored `count`/`offset`, and supported `EmailAddress`, `SuppressionReason`, and `Origin` filters in live probes.
 - `GET /message-streams/{stream}/suppressions` returned `Method Not Allowed`; that path remains mutation-only for `POST` create.
+- `GET /message-streams/{stream}/suppressions/dump` is a real full-export endpoint, but agent-facing commands intentionally avoid it because it can return very large responses.
 - `page=6` alone returned a missing `offset` API error; UI page navigation maps to CLI `--offset`, not an API `page` parameter.
 
 ## Query parameter conventions
