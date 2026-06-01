@@ -3,6 +3,7 @@ package output
 import (
 	"encoding/json"
 	"io"
+	"math"
 	"os"
 	"sync"
 
@@ -153,9 +154,32 @@ func printYAML(data any, prune bool) {
 	if prune {
 		decoded = pruneNulls(decoded)
 	}
-	enc := yaml.NewEncoder(os.Stdout)
+	decoded = normalizeYAMLNumbers(decoded)
+	enc := yaml.NewEncoder(Stdout())
 	enc.SetIndent(2)
 	_ = enc.Encode(decoded)
+}
+
+func normalizeYAMLNumbers(v any) any {
+	switch val := v.(type) {
+	case map[string]any:
+		for k, child := range val {
+			val[k] = normalizeYAMLNumbers(child)
+		}
+		return val
+	case []any:
+		for i, child := range val {
+			val[i] = normalizeYAMLNumbers(child)
+		}
+		return val
+	case float64:
+		if math.IsInf(val, 0) || math.IsNaN(val) || math.Trunc(val) != val {
+			return val
+		}
+		return int64(val)
+	default:
+		return v
+	}
 }
 
 func pruneNulls(v any) any {

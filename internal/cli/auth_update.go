@@ -55,13 +55,13 @@ func registerAuthUpdate(parent *cobra.Command) {
 			cfg := config.Read()
 			profile := cfg.Profiles[alias]
 			return writeItem(map[string]any{
-				"status":          "updated",
-				"profile":         alias,
-				"default":         cfg.DefaultProfile == alias,
-				"host":            profile.Host,
-				"default_server":  profile.DefaultServer,
-				"servers":         profile.Servers,
-				"credential_kind": credential.Summary(alias),
+				"status":         "updated",
+				"profile":        alias,
+				"default":        cfg.DefaultProfile == alias,
+				"host":           profile.Host,
+				"default_server": profile.DefaultServer,
+				"servers":        profile.Servers,
+				"credentials":    credential.Summary(alias),
 			}, "")
 		},
 	}

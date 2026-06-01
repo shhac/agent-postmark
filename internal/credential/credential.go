@@ -189,9 +189,8 @@ func Summary(name string) map[string]any {
 		servers["default"] = true
 	}
 	return map[string]any{
-		"account_token": current.AccountToken,
-		"servers":       servers,
-		"server_token":  current.ServerToken,
+		"account": current.AccountToken,
+		"servers": servers,
 	}
 }
 

@@ -2,10 +2,12 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -115,6 +117,48 @@ func TestHiddenAuthAliasExecutesProfiles(t *testing.T) {
 	}
 }
 
+func TestProfilesListShowsCredentialPresenceWithoutRedaction(t *testing.T) {
+	stdout, stderr, _ := runCLIWithSetup(t, setupProfileListFixture(t), "profiles", "list")
+	if stderr != "" {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if strings.Contains(stdout, "[REDACTED]") || strings.Contains(stdout, "@redacted") {
+		t.Fatalf("credential presence should not be redacted: %s", stdout)
+	}
+	if strings.Contains(stdout, "account_token") || strings.Contains(stdout, "server_token") {
+		t.Fatalf("profile list should avoid token-shaped metadata keys: %s", stdout)
+	}
+
+	var row map[string]any
+	if err := json.Unmarshal([]byte(strings.TrimSpace(stdout)), &row); err != nil {
+		t.Fatalf("unmarshal profile row: %v\n%s", err, stdout)
+	}
+	credentials, ok := row["credentials"].(map[string]any)
+	if !ok {
+		t.Fatalf("credentials missing from %v", row)
+	}
+	if credentials["account"] != true {
+		t.Fatalf("account credential presence = %#v", credentials["account"])
+	}
+	servers, ok := credentials["servers"].(map[string]any)
+	if !ok || servers["app"] != true {
+		t.Fatalf("server credential presence = %#v", credentials["servers"])
+	}
+}
+
+func TestProfilesListYAML(t *testing.T) {
+	stdout, stderr, _ := runCLIWithSetup(t, setupProfileListFixture(t), "--format", "yaml", "profiles", "list")
+	if stderr != "" {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if !strings.Contains(stdout, "results:") || !strings.Contains(stdout, "credentials:") || !strings.Contains(stdout, "account: true") || !strings.Contains(stdout, "server_id: 101") {
+		t.Fatalf("stdout = %s", stdout)
+	}
+	if strings.Contains(stdout, "[REDACTED]") || strings.Contains(stdout, "@redacted") {
+		t.Fatalf("credential presence should not be redacted: %s", stdout)
+	}
+}
+
 func TestServersListStreamsCompactNDJSON(t *testing.T) {
 	stdout, stderr, _ := runCLI(t, "servers", "list")
 	if stderr != "" {
@@ -125,6 +169,27 @@ func TestServersListStreamsCompactNDJSON(t *testing.T) {
 	}
 	if strings.Contains(stdout, "HtmlBody") {
 		t.Fatalf("server list should be compact, got %s", stdout)
+	}
+}
+
+func setupProfileListFixture(t *testing.T) func() {
+	t.Helper()
+	return func() {
+		if err := config.StoreProfile("prod", config.Profile{
+			DefaultServer: "app",
+			Servers: map[string]config.ServerProfile{
+				"app": {ServerID: 101, MessageStream: "outbound"},
+			},
+		}); err != nil {
+			t.Fatalf("StoreProfile: %v", err)
+		}
+		if err := os.MkdirAll(config.ConfigDir(), 0o755); err != nil {
+			t.Fatalf("MkdirAll: %v", err)
+		}
+		index := []byte(`{"prod":{"account_token":true,"servers":{"app":true}}}` + "\n")
+		if err := os.WriteFile(filepath.Join(config.ConfigDir(), "credentials.json"), index, 0o600); err != nil {
+			t.Fatalf("WriteFile: %v", err)
+		}
 	}
 }
 

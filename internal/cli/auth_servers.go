@@ -9,12 +9,12 @@ import (
 	"github.com/shhac/agent-postmark/internal/credential"
 )
 
-func registerAuthServers(parent *cobra.Command) {
+func registerAuthServers(parent *cobra.Command, globals *GlobalFlags) {
 	cmd := &cobra.Command{Use: "servers", Short: "Manage server-token contexts within a profile"}
 	registerAuthServerAdd(cmd)
 	registerAuthServerUpdate(cmd)
 	registerAuthServerDefault(cmd)
-	registerAuthServerList(cmd)
+	registerAuthServerList(cmd, globals)
 	registerAuthServerRemove(cmd)
 	parent.AddCommand(cmd)
 }
@@ -148,7 +148,7 @@ func registerAuthServerDefault(parent *cobra.Command) {
 	})
 }
 
-func registerAuthServerList(parent *cobra.Command) {
+func registerAuthServerList(parent *cobra.Command, globals *GlobalFlags) {
 	parent.AddCommand(&cobra.Command{
 		Use:   "list <profile>",
 		Short: "List server contexts for a profile without exposing tokens",
@@ -171,11 +171,11 @@ func registerAuthServerList(parent *cobra.Command) {
 					"server_id":      server.ServerID,
 					"message_stream": server.MessageStream,
 					"credential":     "keychain",
-					"server_token":   serverTokens[alias],
+					"configured":     serverTokens[alias],
 				})
 				rows = append(rows, row)
 			}
-			return writeList(rows, len(rows), 0, len(rows), "ProfileServers", "", false)
+			return writeList(rows, len(rows), 0, len(rows), "ProfileServers", globals.Format, false)
 		},
 	})
 }
@@ -204,13 +204,13 @@ func writeServerProfileResult(status, profileAlias, serverAlias string) error {
 	profile := cfg.Profiles[profileAlias]
 	server := profile.Servers[serverAlias]
 	return writeItem(map[string]any{
-		"status":          status,
-		"profile":         profileAlias,
-		"server":          serverAlias,
-		"default":         profile.DefaultServer == serverAlias,
-		"server_id":       server.ServerID,
-		"message_stream":  server.MessageStream,
-		"credential":      "keychain",
-		"credential_kind": credential.Summary(profileAlias),
+		"status":         status,
+		"profile":        profileAlias,
+		"server":         serverAlias,
+		"default":        profile.DefaultServer == serverAlias,
+		"server_id":      server.ServerID,
+		"message_stream": server.MessageStream,
+		"credential":     "keychain",
+		"credentials":    credential.Summary(profileAlias),
 	}, "")
 }

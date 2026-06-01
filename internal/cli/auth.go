@@ -19,10 +19,10 @@ func registerAuth(root *cobra.Command, globals *GlobalFlags) {
 	registerAuthAdd(auth)
 	registerAuthSetup(auth)
 	registerAuthUpdate(auth)
-	registerAuthServers(auth)
+	registerAuthServers(auth, globals)
 	registerAuthCheck(auth, globals)
 	registerAuthDefault(auth)
-	registerAuthList(auth)
+	registerAuthList(auth, globals)
 	registerAuthRemove(auth)
 	root.AddCommand(auth)
 }
@@ -90,7 +90,7 @@ func registerAuthDefault(parent *cobra.Command) {
 	})
 }
 
-func registerAuthList(parent *cobra.Command) {
+func registerAuthList(parent *cobra.Command, globals *GlobalFlags) {
 	parent.AddCommand(&cobra.Command{
 		Use:   "list",
 		Short: "List configured profiles without exposing tokens",
@@ -99,17 +99,17 @@ func registerAuthList(parent *cobra.Command) {
 			rows := make([]json.RawMessage, 0, len(cfg.Profiles))
 			for alias, profile := range cfg.Profiles {
 				row, _ := json.Marshal(map[string]any{
-					"profile":         alias,
-					"default":         alias == cfg.DefaultProfile,
-					"credential":      "keychain",
-					"credential_kind": credential.Summary(alias),
-					"host":            profile.Host,
-					"default_server":  profile.DefaultServer,
-					"servers":         profile.Servers,
+					"profile":        alias,
+					"default":        alias == cfg.DefaultProfile,
+					"credential":     "keychain",
+					"credentials":    credential.Summary(alias),
+					"host":           profile.Host,
+					"default_server": profile.DefaultServer,
+					"servers":        profile.Servers,
 				})
 				rows = append(rows, row)
 			}
-			return writeList(rows, len(rows), 0, len(rows), "Profiles", "", false)
+			return writeList(rows, len(rows), 0, len(rows), "Profiles", globals.Format, false)
 		},
 	})
 }

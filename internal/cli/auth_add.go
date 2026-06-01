@@ -38,7 +38,7 @@ func registerAuthAdd(parent *cobra.Command) {
 					writeProfileHumanError(err, "The account token was not written to disk. Fix Keychain access and retry with --form.")
 					return nil
 				}
-				stored["account_token"] = storage
+				stored["account"] = storage
 			}
 			if err := config.StoreProfile(alias, config.Profile{Host: host}); err != nil {
 				writeProfileHumanError(err, "Check config directory permissions and retry.")
@@ -47,14 +47,14 @@ func registerAuthAdd(parent *cobra.Command) {
 			cfg := config.Read()
 			profile := cfg.Profiles[alias]
 			return writeItem(map[string]any{
-				"status":          "added",
-				"profile":         alias,
-				"default":         cfg.DefaultProfile == alias,
-				"storage":         stored,
-				"host":            profile.Host,
-				"default_server":  profile.DefaultServer,
-				"servers":         profile.Servers,
-				"credential_kind": credential.Summary(alias),
+				"status":         "added",
+				"profile":        alias,
+				"default":        cfg.DefaultProfile == alias,
+				"storage":        stored,
+				"host":           profile.Host,
+				"default_server": profile.DefaultServer,
+				"servers":        profile.Servers,
+				"credentials":    credential.Summary(alias),
 			}, "")
 		},
 	}
