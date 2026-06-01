@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -105,18 +106,18 @@ func (c *Client) do(ctx context.Context, method string, kind TokenKind, path str
 			}
 			return nil, agenterrors.Wrap(err, agenterrors.FixableByRetry).WithHint("Network request failed after retries.")
 		}
-		raw, readErr := io.ReadAll(resp.Body)
-		_ = resp.Body.Close()
-		if readErr != nil {
-			return nil, agenterrors.Wrap(readErr, agenterrors.FixableByRetry).
-				WithHint("Postmark response could not be read. Retry the command.")
-		}
 		if c.Debug && c.DebugOut != nil {
 			_ = json.NewEncoder(c.DebugOut).Encode(map[string]any{
-				"debug":  "response",
-				"status": resp.StatusCode,
-				"url":    req.URL.String(),
+				"debug":          "response",
+				"status":         resp.StatusCode,
+				"url":            req.URL.String(),
+				"content_length": resp.ContentLength,
 			})
+		}
+		raw, readErr := readResponseBody(resp.Body)
+		_ = resp.Body.Close()
+		if readErr != nil {
+			return nil, readErr
 		}
 		if retryable(resp.StatusCode) && attempt < attempts-1 {
 			c.Sleep(backoff(attempt, retryAfter(resp.Header.Get("Retry-After"))))
@@ -132,6 +133,18 @@ func (c *Client) do(ctx context.Context, method string, kind TokenKind, path str
 	}
 	return nil, agenterrors.New("request failed after retries", agenterrors.FixableByRetry).
 		WithHint("Retry later, or reduce the request size if this was a list/search command.")
+}
+
+func readResponseBody(body io.Reader) ([]byte, error) {
+	raw, err := io.ReadAll(body)
+	if err == nil {
+		return raw, nil
+	}
+	if errors.Is(err, io.ErrUnexpectedEOF) && json.Valid(bytes.TrimSpace(raw)) {
+		return raw, nil
+	}
+	return nil, agenterrors.Wrap(err, agenterrors.FixableByRetry).
+		WithHint("Postmark closed the response before a complete JSON body was read. Retry once; if it repeats, use --debug and narrow list filters such as --count, --fromdate, or --todate.")
 }
 
 func (c *Client) newRequest(ctx context.Context, method string, kind TokenKind, path string, query url.Values, payload []byte) (*http.Request, error) {

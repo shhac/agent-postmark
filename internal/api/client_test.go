@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -67,6 +68,44 @@ func TestClientMapsUnauthorized(t *testing.T) {
 	}
 }
 
+func TestClientAcceptsCompleteJSONWithUnexpectedEOF(t *testing.T) {
+	client := New("https://example.test", "", "server_mock")
+	client.HTTPClient = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body:       errReadCloser{Reader: strings.NewReader(`{"InboundMessages":[],"TotalCount":0}`), err: io.ErrUnexpectedEOF},
+		}, nil
+	})
+
+	raw, err := client.Get(context.Background(), ServerToken, "/messages/inbound", nil)
+	if err != nil {
+		t.Fatalf("Get returned error: %v", err)
+	}
+	if got := string(raw); got != `{"InboundMessages":[],"TotalCount":0}` {
+		t.Fatalf("raw = %q", got)
+	}
+}
+
+func TestClientRejectsIncompleteJSONWithUnexpectedEOF(t *testing.T) {
+	client := New("https://example.test", "", "server_mock")
+	client.HTTPClient = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body:       errReadCloser{Reader: strings.NewReader(`{"InboundMessages":[`), err: io.ErrUnexpectedEOF},
+		}, nil
+	})
+
+	_, err := client.Get(context.Background(), ServerToken, "/messages/inbound", nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "unexpected EOF") {
+		t.Fatalf("error = %q", err.Error())
+	}
+}
+
 func jsonResponse(status int, body any) *http.Response {
 	var b strings.Builder
 	_ = json.NewEncoder(&b).Encode(body)
@@ -75,4 +114,24 @@ func jsonResponse(status int, body any) *http.Response {
 		Header:     http.Header{"Content-Type": []string{"application/json"}},
 		Body:       io.NopCloser(strings.NewReader(b.String())),
 	}
+}
+
+type errReadCloser struct {
+	io.Reader
+	err error
+}
+
+func (r errReadCloser) Read(p []byte) (int, error) {
+	n, err := r.Reader.Read(p)
+	if err == nil {
+		return n, nil
+	}
+	if errors.Is(err, io.EOF) {
+		return n, r.err
+	}
+	return n, err
+}
+
+func (r errReadCloser) Close() error {
+	return nil
 }
