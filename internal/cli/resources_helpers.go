@@ -21,8 +21,7 @@ func accountListCommand(use, short string, globals *GlobalFlags, path, envelope 
 		Short: short,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return withClient(cmd.Context(), globals, func(ctx context.Context, resolved *resolvedContext) error {
-				q := url.Values{"count": {strconv.Itoa(count)}, "offset": {strconv.Itoa(offset)}}
-				raw, err := resolved.Client.Get(ctx, api.AccountToken, path, q)
+				raw, err := resolved.Client.Get(ctx, api.AccountToken, path, paginationQuery(count, offset))
 				if err != nil {
 					return err
 				}
@@ -143,6 +142,10 @@ func addIfSet(q url.Values, key, value string) {
 	if value != "" {
 		q.Set(key, value)
 	}
+}
+
+func paginationQuery(count, offset int) url.Values {
+	return url.Values{"count": {strconv.Itoa(count)}, "offset": {strconv.Itoa(offset)}}
 }
 
 func writeWebhookHealth(raw json.RawMessage, format string) error {

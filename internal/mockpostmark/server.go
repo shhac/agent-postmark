@@ -141,6 +141,10 @@ func listRoute(method, path, field string, items func(*http.Request) []any, opts
 		path:    path,
 		display: displayPath(method, path),
 		handle: func(w http.ResponseWriter, r *http.Request) {
+			if path == "/servers" && r.URL.Query().Get("offset") == "" {
+				write(w, http.StatusUnprocessableEntity, map[string]any{"ErrorCode": 600, "Message": "Parameter 'offset' is required but has been left out"})
+				return
+			}
 			writeList(w, field, items(r), r)
 		},
 	}

@@ -51,7 +51,7 @@ func registerAuthCheck(parent *cobra.Command, globals *GlobalFlags) {
 					},
 				}
 				if resolved.AccountToken {
-					raw, err := resolved.Client.Get(ctx, api.AccountToken, "/servers", nil)
+					raw, err := resolved.Client.Get(ctx, api.AccountToken, "/servers", paginationQuery(1, 0))
 					if err != nil {
 						return err
 					}

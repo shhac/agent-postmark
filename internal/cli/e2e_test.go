@@ -17,14 +17,16 @@ import (
 )
 
 type mockDoer struct {
-	handler http.Handler
-	calls   int
-	paths   []string
+	handler    http.Handler
+	calls      int
+	paths      []string
+	rawQueries []string
 }
 
 func (m *mockDoer) Do(req *http.Request) (*http.Response, error) {
 	m.calls++
 	m.paths = append(m.paths, req.URL.Path)
+	m.rawQueries = append(m.rawQueries, req.URL.RawQuery)
 	rec := httptest.NewRecorder()
 	m.handler.ServeHTTP(rec, req)
 	return rec.Result(), nil
@@ -145,6 +147,22 @@ func TestProfileServerAliasProvidesServerID(t *testing.T) {
 	}
 	if len(doer.paths) != 1 || doer.paths[0] != "/servers/101/message-streams" {
 		t.Fatalf("paths = %#v", doer.paths)
+	}
+}
+
+func TestProfilesCheckUsesRequiredServerPagination(t *testing.T) {
+	stdout, stderr, doer := runCLI(t, "profiles", "check")
+	if stderr != "" {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if !strings.Contains(stdout, `"account_check"`) || !strings.Contains(stdout, `"server_check"`) {
+		t.Fatalf("stdout = %s", stdout)
+	}
+	if len(doer.paths) != 2 || doer.paths[0] != "/servers" || doer.paths[1] != "/deliverystats" {
+		t.Fatalf("paths = %#v", doer.paths)
+	}
+	if doer.rawQueries[0] != "count=1&offset=0" {
+		t.Fatalf("profile check /servers query = %q", doer.rawQueries[0])
 	}
 }
 
