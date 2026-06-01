@@ -49,20 +49,20 @@ Initial command groups:
 agent-postmark auth add prod --form
 agent-postmark auth check prod
 agent-postmark servers list
-agent-postmark streams list --server <server-id>
+agent-postmark --server-id <server-id> streams list
 agent-postmark signatures list
 agent-postmark signatures get <signature-id>
 agent-postmark domains list
 agent-postmark domains get <domain-id>
 agent-postmark domains verify-dkim <domain-id>
 agent-postmark domains verify-spf <domain-id>
-agent-postmark webhooks list --server <server-id>
+agent-postmark --server <server-alias> webhooks list
 agent-postmark webhooks get <webhook-id>
 agent-postmark messages search --to user@example.com --since 24h
 agent-postmark messages get <message-id>
 agent-postmark bounces list --email user@example.com --since 30d
 agent-postmark suppressions check user@example.com
-agent-postmark stats outbound --server <server-id> --since 7d
+agent-postmark --server <server-alias> stats delivery
 ```
 
 High-level investigations:
@@ -71,7 +71,7 @@ High-level investigations:
 agent-postmark investigate delivery --email user@example.com --since 7d
 agent-postmark investigate bounce <bounce-id>
 agent-postmark investigate domain-health example.com
-agent-postmark investigate webhook-health --server <server-id>
+agent-postmark --server <server-alias> investigate webhook-health
 agent-postmark investigate stream-health --stream outbound --since 7d
 ```
 

@@ -22,6 +22,7 @@ type resolvedContext struct {
 	Client        *api.Client
 	Profile       string
 	Host          string
+	Server        string
 	ServerID      int
 	MessageStream string
 	AccountToken  bool
@@ -60,8 +61,15 @@ func resolve(flags *GlobalFlags) (*resolvedContext, error) {
 	}
 
 	host := firstNonEmpty(flags.Host, os.Getenv("AGENT_POSTMARK_BASE_URL"), profile.Host, os.Getenv("AGENT_POSTMARK_HOST"), config.DefaultHost)
-	serverID := firstNonZero(flags.ServerID, profile.DefaultServer, envInt("AGENT_POSTMARK_SERVER_ID"), envInt("POSTMARK_SERVER_ID"))
-	stream := firstNonEmpty(flags.MessageStream, profile.MessageStream, os.Getenv("AGENT_POSTMARK_MESSAGE_STREAM"), "outbound")
+	serverAlias := firstNonEmpty(flags.Server, os.Getenv("AGENT_POSTMARK_SERVER"), profile.DefaultServer)
+	if serverAlias == "" && len(profile.Servers) == 1 {
+		for alias := range profile.Servers {
+			serverAlias = alias
+		}
+	}
+	serverProfile := profile.Servers[serverAlias]
+	serverID := firstNonZero(flags.ServerID, serverProfile.ServerID, envInt("AGENT_POSTMARK_SERVER_ID"), envInt("POSTMARK_SERVER_ID"))
+	stream := firstNonEmpty(flags.MessageStream, serverProfile.MessageStream, os.Getenv("AGENT_POSTMARK_MESSAGE_STREAM"), "outbound")
 
 	accountToken := firstNonEmpty(flags.AccountToken, os.Getenv("AGENT_POSTMARK_ACCOUNT_TOKEN"), os.Getenv("POSTMARK_ACCOUNT_TOKEN"))
 	serverToken := firstNonEmpty(flags.ServerToken, os.Getenv("AGENT_POSTMARK_SERVER_TOKEN"), os.Getenv("POSTMARK_SERVER_TOKEN"))
@@ -69,13 +77,13 @@ func resolve(flags *GlobalFlags) (*resolvedContext, error) {
 	serverStored := serverToken != ""
 	if profileName != "" {
 		if accountToken == "" {
-			if token, err := credential.Get(profileName, credential.AccountToken); err == nil {
+			if token, err := credential.GetAccount(profileName); err == nil {
 				accountToken = token
 				accountStored = true
 			}
 		}
-		if serverToken == "" {
-			if token, err := credential.Get(profileName, credential.ServerToken); err == nil {
+		if serverToken == "" && serverAlias != "" {
+			if token, err := credential.GetServer(profileName, serverAlias); err == nil {
 				serverToken = token
 				serverStored = true
 			}
@@ -83,7 +91,7 @@ func resolve(flags *GlobalFlags) (*resolvedContext, error) {
 	}
 	if accountToken == "" && serverToken == "" {
 		return nil, agenterrors.New("missing Postmark credentials", agenterrors.FixableByHuman).
-			WithHint("Run 'agent-postmark profiles add <profile> --form --account-token --server-token' or set direct env vars for local testing.")
+			WithHint("Run 'agent-postmark profiles add <profile> --form --account-token' and/or 'agent-postmark profiles servers add <profile> <server> --form --server-token --server-id <id>'.")
 	}
 	client := newAPIClient(host, accountToken, serverToken)
 	client.MaxRetries = flags.MaxRetries
@@ -93,6 +101,7 @@ func resolve(flags *GlobalFlags) (*resolvedContext, error) {
 		Client:        client,
 		Profile:       profileName,
 		Host:          host,
+		Server:        serverAlias,
 		ServerID:      serverID,
 		MessageStream: stream,
 		AccountToken:  accountStored,
@@ -103,7 +112,7 @@ func resolve(flags *GlobalFlags) (*resolvedContext, error) {
 func requireServer(ctx *resolvedContext) error {
 	if ctx.ServerID == 0 {
 		return agenterrors.New("missing server id", agenterrors.FixableByAgent).
-			WithHint("Run 'agent-postmark servers list' or set one with 'agent-postmark profiles update <profile> --server <id>'.")
+			WithHint("Run 'agent-postmark servers list' or set one with 'agent-postmark profiles servers update <profile> <server> --server-id <id>'.")
 	}
 	return nil
 }

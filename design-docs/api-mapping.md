@@ -17,7 +17,7 @@ Sources:
 | `servers` | `X-Postmark-Account-Token` | Server inventory is account-level. |
 | `domains` | `X-Postmark-Account-Token` | Sender domains are account-level. |
 | `signatures` | `X-Postmark-Account-Token` | Sender signatures are account-level. |
-| `streams list --server` | `X-Postmark-Account-Token` | Listing streams for a server is account/server management. |
+| `streams list` with `--server-id` | `X-Postmark-Account-Token` | Listing streams for a server is account/server management. |
 | `messages` | `X-Postmark-Server-Token` | Message activity belongs to one server token. |
 | `bounces` | `X-Postmark-Server-Token` | Bounce activity belongs to one server token. |
 | `stats delivery` | `X-Postmark-Server-Token` | Delivery stats are server-level. |
@@ -29,7 +29,7 @@ Sources:
 | --- | --- | --- |
 | `servers list` | `GET /servers?count=&offset=` | NDJSON rows from `Servers`; pagination meta from `TotalCount`. |
 | `servers get <id>` | `GET /servers/{id}` | Redacted JSON. |
-| `streams list --server <id>` | `GET /servers/{id}/message-streams` | NDJSON rows from `MessageStreams`. |
+| `streams list` | `GET /servers/{id}/message-streams` | Uses the selected profile server's numeric ID or `--server-id`; NDJSON rows from `MessageStreams`. |
 | `streams get <id>` | `GET /message-streams/{id}` | Redacted JSON. |
 | `domains list` | `GET /domains?count=&offset=` | NDJSON rows from `Domains`. |
 | `domains get <id>` | `GET /domains/{id}` | Redacted JSON. |

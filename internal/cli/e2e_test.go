@@ -19,16 +19,22 @@ import (
 type mockDoer struct {
 	handler http.Handler
 	calls   int
+	paths   []string
 }
 
 func (m *mockDoer) Do(req *http.Request) (*http.Response, error) {
 	m.calls++
+	m.paths = append(m.paths, req.URL.Path)
 	rec := httptest.NewRecorder()
 	m.handler.ServeHTTP(rec, req)
 	return rec.Result(), nil
 }
 
 func runCLI(t *testing.T, args ...string) (string, string, *mockDoer) {
+	return runCLIWithSetup(t, nil, args...)
+}
+
+func runCLIWithSetup(t *testing.T, setup func(), args ...string) (string, string, *mockDoer) {
 	t.Helper()
 	config.SetConfigDir(t.TempDir())
 	t.Setenv("AGENT_POSTMARK_PROFILE", "")
@@ -36,6 +42,9 @@ func runCLI(t *testing.T, args ...string) (string, string, *mockDoer) {
 	t.Setenv("AGENT_POSTMARK_SERVER_TOKEN", "")
 	t.Setenv("POSTMARK_ACCOUNT_TOKEN", "")
 	t.Setenv("POSTMARK_SERVER_TOKEN", "")
+	if setup != nil {
+		setup()
+	}
 
 	doer := &mockDoer{handler: mockpostmark.NewServer()}
 	oldFactory := newAPIClient
@@ -114,6 +123,28 @@ func TestServersListStreamsCompactNDJSON(t *testing.T) {
 	}
 	if strings.Contains(stdout, "HtmlBody") {
 		t.Fatalf("server list should be compact, got %s", stdout)
+	}
+}
+
+func TestProfileServerAliasProvidesServerID(t *testing.T) {
+	stdout, stderr, doer := runCLIWithSetup(t, func() {
+		if err := config.StoreProfile("prod", config.Profile{
+			DefaultServer: "app",
+			Servers: map[string]config.ServerProfile{
+				"app": {ServerID: 101, MessageStream: "broadcasts"},
+			},
+		}); err != nil {
+			t.Fatalf("StoreProfile: %v", err)
+		}
+	}, "--profile", "prod", "--server", "app", "streams", "list")
+	if stderr != "" {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if !strings.Contains(stdout, `"ID":"outbound"`) || !strings.Contains(stdout, `"ID":"broadcasts"`) {
+		t.Fatalf("stdout = %s", stdout)
+	}
+	if len(doer.paths) != 1 || doer.paths[0] != "/servers/101/message-streams" {
+		t.Fatalf("paths = %#v", doer.paths)
 	}
 }
 

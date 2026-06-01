@@ -22,11 +22,24 @@ type Defaults struct {
 }
 
 type Profile struct {
-	Host           string `json:"host,omitempty"`
-	DefaultServer  int    `json:"default_server_id,omitempty"`
-	MessageStream  string `json:"message_stream,omitempty"`
-	AccountTokenID string `json:"account_token_id,omitempty"`
-	ServerTokenID  string `json:"server_token_id,omitempty"`
+	Host           string                   `json:"host,omitempty"`
+	DefaultServer  string                   `json:"default_server,omitempty"`
+	Servers        map[string]ServerProfile `json:"servers,omitempty"`
+	AccountTokenID string                   `json:"account_token_id,omitempty"`
+
+	LegacyDefaultServerID int    `json:"default_server_id,omitempty"`
+	LegacyMessageStream   string `json:"message_stream,omitempty"`
+	LegacyServerTokenID   string `json:"server_token_id,omitempty"`
+}
+
+type ServerProfile struct {
+	ServerID      int    `json:"server_id,omitempty"`
+	MessageStream string `json:"message_stream,omitempty"`
+	ServerTokenID string `json:"server_token_id,omitempty"`
+}
+
+func ErrProfileNotConfigured(alias string) error {
+	return fmt.Errorf("profile %q is not configured", alias)
 }
 
 var (
@@ -113,14 +126,56 @@ func StoreProfile(alias string, profile Profile) error {
 	return Write(cfg)
 }
 
+func StoreServer(profileAlias, serverAlias string, server ServerProfile) error {
+	return UpdateProfile(profileAlias, func(profile Profile) Profile {
+		if profile.Servers == nil {
+			profile.Servers = map[string]ServerProfile{}
+		}
+		profile.Servers[serverAlias] = normalizeServer(server)
+		if profile.DefaultServer == "" {
+			profile.DefaultServer = serverAlias
+		}
+		return profile
+	})
+}
+
 func UpdateProfile(alias string, update func(Profile) Profile) error {
 	cfg := Read()
 	profile, ok := cfg.Profiles[alias]
 	if !ok {
-		return fmt.Errorf("profile %q is not configured", alias)
+		return ErrProfileNotConfigured(alias)
 	}
 	cfg.Profiles[alias] = normalizeProfile(update(profile))
 	return Write(cfg)
+}
+
+func UpdateServer(profileAlias, serverAlias string, update func(ServerProfile) ServerProfile) error {
+	cfg := Read()
+	profile, ok := cfg.Profiles[profileAlias]
+	if !ok {
+		return ErrProfileNotConfigured(profileAlias)
+	}
+	server, ok := profile.Servers[serverAlias]
+	if !ok {
+		return fmt.Errorf("server %q is not configured for profile %q", serverAlias, profileAlias)
+	}
+	profile.Servers[serverAlias] = normalizeServer(update(server))
+	cfg.Profiles[profileAlias] = profile
+	return Write(cfg)
+}
+
+func RemoveServer(profileAlias, serverAlias string) error {
+	return UpdateProfile(profileAlias, func(profile Profile) Profile {
+		delete(profile.Servers, serverAlias)
+		if profile.DefaultServer == serverAlias {
+			profile.DefaultServer = ""
+			for alias := range profile.Servers {
+				profile.DefaultServer = alias
+				break
+			}
+		}
+		return profile
+	})
 }
 
 func RemoveProfile(alias string) error {
@@ -133,6 +188,20 @@ func RemoveProfile(alias string) error {
 			break
 		}
 	}
+	return Write(cfg)
+}
+
+func SetDefaultServer(profileAlias, serverAlias string) error {
+	cfg := Read()
+	profile, ok := cfg.Profiles[profileAlias]
+	if !ok {
+		return ErrProfileNotConfigured(profileAlias)
+	}
+	if _, ok := profile.Servers[serverAlias]; !ok {
+		return fmt.Errorf("server %q is not configured for profile %q", serverAlias, profileAlias)
+	}
+	profile.DefaultServer = serverAlias
+	cfg.Profiles[profileAlias] = profile
 	return Write(cfg)
 }
 
@@ -179,7 +248,37 @@ func normalizeProfile(profile Profile) Profile {
 	if profile.Host == "" {
 		profile.Host = DefaultHost
 	}
+	if profile.Servers == nil {
+		profile.Servers = map[string]ServerProfile{}
+	}
+	if len(profile.Servers) == 0 && (profile.LegacyDefaultServerID != 0 || profile.LegacyMessageStream != "") {
+		profile.DefaultServer = firstNonEmpty(profile.DefaultServer, "default")
+		profile.Servers[profile.DefaultServer] = ServerProfile{
+			ServerID:      profile.LegacyDefaultServerID,
+			MessageStream: profile.LegacyMessageStream,
+			ServerTokenID: profile.LegacyServerTokenID,
+		}
+	}
+	for alias, server := range profile.Servers {
+		profile.Servers[alias] = normalizeServer(server)
+	}
 	return profile
+}
+
+func normalizeServer(server ServerProfile) ServerProfile {
+	if server.MessageStream == "" {
+		server.MessageStream = "outbound"
+	}
+	return server
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func intPtr(value int) *int { return &value }

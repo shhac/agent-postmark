@@ -18,6 +18,7 @@ func registerAuth(root *cobra.Command, globals *GlobalFlags) {
 	auth := &cobra.Command{Use: "profiles", Short: "Manage Postmark credential profiles"}
 	registerAuthAdd(auth)
 	registerAuthUpdate(auth)
+	registerAuthServers(auth)
 	registerAuthCheck(auth, globals)
 	registerAuthDefault(auth)
 	registerAuthList(auth)
@@ -40,6 +41,7 @@ func registerAuthCheck(parent *cobra.Command, globals *GlobalFlags) {
 					"status":         "ok",
 					"profile":        resolved.Profile,
 					"host":           resolved.Host,
+					"server":         resolved.Server,
 					"default_server": resolved.ServerID,
 					"message_stream": resolved.MessageStream,
 					"tokens": map[string]bool{
@@ -102,7 +104,7 @@ func registerAuthList(parent *cobra.Command) {
 					"credential_kind": credential.Summary(alias),
 					"host":            profile.Host,
 					"default_server":  profile.DefaultServer,
-					"message_stream":  profile.MessageStream,
+					"servers":         profile.Servers,
 				})
 				rows = append(rows, row)
 			}

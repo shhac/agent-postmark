@@ -15,6 +15,7 @@ type GlobalFlags struct {
 	Host          string
 	AccountToken  string
 	ServerToken   string
+	Server        string
 	ServerID      int
 	MessageStream string
 	Format        string
@@ -41,7 +42,8 @@ func newRootCmd(version string) *cobra.Command {
 	root.PersistentFlags().StringVar(&globals.Host, "host", "", "Postmark API host override")
 	root.PersistentFlags().StringVar(&globals.AccountToken, "account-token", "", "Account token override; never printed or persisted")
 	root.PersistentFlags().StringVar(&globals.ServerToken, "server-token", "", "Server token override; never printed or persisted")
-	root.PersistentFlags().IntVar(&globals.ServerID, "server", 0, "Default server ID override")
+	root.PersistentFlags().StringVar(&globals.Server, "server", "", "Server alias override within the selected profile")
+	root.PersistentFlags().IntVar(&globals.ServerID, "server-id", 0, "Numeric Postmark server ID override")
 	root.PersistentFlags().StringVar(&globals.MessageStream, "stream", "", "Message stream override, such as outbound or broadcasts")
 	root.PersistentFlags().StringVarP(&globals.Format, "format", "f", "", "Output format: json, yaml, jsonl")
 	root.PersistentFlags().IntVarP(&globals.Timeout, "timeout", "t", 0, "Request timeout in milliseconds")

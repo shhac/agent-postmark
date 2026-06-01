@@ -62,10 +62,11 @@ support workflows.
 ## Is this in the wrong stream?
 
 ```bash
-agent-postmark streams list --server <server-id>
+agent-postmark --server-id <server-id> streams list
 agent-postmark investigate stream-health --stream outbound
 agent-postmark messages search --to user@example.com --stream broadcasts
 ```
 
-Use `profiles update --stream <stream>` only when the user wants the profile
-default changed.
+Use `profiles servers update <profile> <server> --stream <stream>` only when the
+user wants the stored server-context default changed. Use `--server <alias>` to
+switch among stored server contexts for a single command.

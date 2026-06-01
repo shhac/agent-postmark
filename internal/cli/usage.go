@@ -9,13 +9,14 @@ func registerUsage(root *cobra.Command) {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return writeItem(map[string]any{
 				"setup": []string{
-					"agent-postmark profiles add prod --form --account-token --server-token --server <id>",
+					"agent-postmark profiles add prod --form --account-token",
+					"agent-postmark profiles servers add prod app --form --server-token --server-id <id> --stream outbound --default",
 					"agent-postmark profiles check prod",
-					"agent-postmark profiles update prod --server <id> --stream outbound --default",
+					"agent-postmark profiles servers update prod app --server-id <id> --stream outbound --default",
 				},
 				"discover": []string{
 					"agent-postmark servers list",
-					"agent-postmark streams list --server <id>",
+					"agent-postmark --server-id <id> streams list",
 					"agent-postmark domains list",
 					"agent-postmark signatures list",
 					"agent-postmark webhooks list",

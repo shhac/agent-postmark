@@ -174,7 +174,7 @@ func (c *Client) newRequest(ctx context.Context, method string, kind TokenKind, 
 	case ServerToken:
 		if c.ServerToken == "" {
 			return nil, agenterrors.New("missing Postmark server token", agenterrors.FixableByHuman).
-				WithHint("Run 'agent-postmark profiles add <profile> --form --server-token' or choose an account-token command.")
+				WithHint("Run 'agent-postmark profiles servers add <profile> <server> --form --server-token --server-id <id>' or choose an account-token command.")
 		}
 		req.Header.Set("X-Postmark-Server-Token", c.ServerToken)
 	default:

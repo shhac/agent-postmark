@@ -21,10 +21,12 @@ webhooks.
 
 - Never ask the tool to reveal account or server tokens.
 - Never accept pasted Postmark tokens in chat. Ask the user to run
-  `agent-postmark profiles add <profile> --form --account-token --server-token`
+  `agent-postmark profiles add <profile> --form --account-token` and/or
+  `agent-postmark profiles servers add <profile> <server> --form --server-token --server-id <id>`
   locally so tokens go directly into OS dialogs.
 - Use `agent-postmark profiles update <profile> --form --account-token` or
-  `--server-token` when a stored token needs replacement.
+  `agent-postmark profiles servers update <profile> <server> --form --server-token`
+  when a stored token needs replacement.
 - Prefer read-only commands.
 - Remember token scope: account-token commands handle servers, domains, streams,
   and signatures; server-token commands handle messages, bounces, stats,
@@ -75,6 +77,8 @@ Investigations emit evidence records:
 
 Non-secret profile/config metadata lives in XDG config. Tokens live in Keychain.
 `profiles list` and `profiles check` show token presence but never token values.
+Use `--server <alias>` to select a stored server context; use `--server-id <id>`
+only when a command needs a numeric Postmark server ID override.
 
 ## Incremental References
 

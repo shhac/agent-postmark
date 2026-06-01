@@ -34,18 +34,22 @@ profile:
 profile
   host: https://api.postmarkapp.com or mock/self-hosted-compatible URL
   account token: stored in Keychain, optional but needed for account resources
-  server token: stored in Keychain, optional but needed for delivery resources
-  default server id: non-secret account/server navigation metadata
-  default message stream: outbound by default
+  default server alias: non-secret pointer to one server context
+  servers:
+    app:
+      server token: stored in Keychain, optional but needed for delivery resources
+      server id: non-secret numeric Postmark server ID
+      default message stream: outbound by default
 ```
 
 The primary command is therefore `profiles`, with `auth` as a hidden
 compatibility alias for sibling CLI familiarity:
 
 ```bash
-agent-postmark profiles add prod --form --account-token --server-token --server 123 --stream outbound
+agent-postmark profiles add prod --form --account-token
+agent-postmark profiles servers add prod app --form --server-token --server-id 123 --stream outbound --default
 agent-postmark profiles check prod
-agent-postmark profiles update prod --server 456 --stream broadcasts --default
+agent-postmark profiles servers update prod app --server-id 456 --stream broadcasts --default
 agent-postmark profiles list
 ```
 
@@ -53,7 +57,7 @@ agent-postmark profiles list
 
 ```text
 agent-postmark
-├── profiles          add, update, remove, list, default, check
+├── profiles          add, update, remove, list, default, check, servers
 ├── servers           list, get
 ├── streams           list, get
 ├── domains           list, get, verify-dkim, verify-spf
@@ -76,7 +80,8 @@ Global flags:
     --host <url>            API host override; AGENT_POSTMARK_BASE_URL wins for tests
     --account-token <tok>   direct account token escape hatch; never persisted or printed
     --server-token <tok>    direct server token escape hatch; never persisted or printed
-    --server <id>           default server ID override
+    --server <alias>        server context alias override
+    --server-id <id>        numeric Postmark server ID override
     --stream <id>           message stream override, default outbound
 -f, --format <fmt>          json, yaml, jsonl/ndjson
 -t, --timeout <ms>          request timeout
@@ -93,6 +98,7 @@ AGENT_POSTMARK_BASE_URL
 AGENT_POSTMARK_HOST
 AGENT_POSTMARK_ACCOUNT_TOKEN
 AGENT_POSTMARK_SERVER_TOKEN
+AGENT_POSTMARK_SERVER
 AGENT_POSTMARK_SERVER_ID
 AGENT_POSTMARK_MESSAGE_STREAM
 POSTMARK_ACCOUNT_TOKEN
@@ -106,8 +112,9 @@ Postmark-native env aliases, then built-in defaults.
 ## Safety contract
 
 - The LLM should never see account or server tokens.
-- `profiles add --form` and `profiles update --form` prompt in a native OS
-  dialog and store tokens in Keychain.
+- `profiles add --form` and `profiles update --form` prompt for account tokens.
+  `profiles servers add/update --form` prompts for server tokens. Tokens are
+  stored independently in Keychain.
 - `--account-token` and `--server-token` are direct-use escape hatches for local
   tests and automation; they are never persisted or printed.
 - Profile config and `credentials.json` contain only non-secret metadata.

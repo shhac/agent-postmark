@@ -6,9 +6,11 @@ support workflows, check `scenarios.md` or `investigations.md` first.
 ## Profiles
 
 ```bash
-agent-postmark profiles add prod --form --account-token --server-token --server 123 --stream outbound
+agent-postmark profiles add prod --form --account-token
+agent-postmark profiles servers add prod app --form --server-token --server-id 123 --stream outbound --default
 agent-postmark profiles check prod
-agent-postmark profiles update prod --server 456 --stream broadcasts --default
+agent-postmark profiles servers update prod app --server-id 456 --stream broadcasts --default
+agent-postmark profiles servers list prod
 agent-postmark profiles list
 agent-postmark auth list
 ```
@@ -20,7 +22,7 @@ agent-postmark auth list
 ```bash
 agent-postmark servers list
 agent-postmark servers get <server-id>
-agent-postmark streams list --server <server-id>
+agent-postmark --server-id <server-id> streams list
 agent-postmark streams get <stream-id>
 agent-postmark domains list
 agent-postmark domains get <domain-id>

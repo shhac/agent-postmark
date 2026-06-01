@@ -11,9 +11,11 @@ without re-learning the boundaries from scratch.
 Command registration is intentionally split by user-facing domain:
 
 - `root.go`: global flags, configured defaults, and hidden `auth` alias routing.
-- `auth.go`, `auth_add.go`, `auth_update.go`, `auth_errors.go`: profile
-  management and secret-safe setup. Tokens are collected via `--form` or direct
-  local-only flags, then stored through `internal/credential`.
+- `auth.go`, `auth_add.go`, `auth_update.go`, `auth_servers.go`,
+  `auth_errors.go`: profile management and secret-safe setup. Account tokens
+  attach to profiles; server tokens attach to server aliases within profiles.
+  Tokens are collected via `--form` or direct local-only flags, then stored
+  through `internal/credential`.
 - `resources.go`, `resources_messages.go`, `resources_recipients.go`,
   `resources_helpers.go`: resource commands, shared read/mutation command
   factories, list output adapters, and guarded `--yes` mutation handling.
@@ -46,12 +48,12 @@ defaults; those stay in `internal/cli`.
 ## Configuration and credentials
 
 `internal/config` stores only non-secret profile metadata such as host, default
-server ID, and default message stream.
+server alias, numeric server IDs, and default message streams.
 
-`internal/credential` stores account/server tokens under profile-specific
-Keychain names on macOS, with a local index fallback on other platforms. CLI
-commands should report token presence as booleans or storage names only, never
-token values.
+`internal/credential` stores account tokens as `<profile>/account` and server
+tokens as `<profile>/server/<server-alias>` under Keychain names on macOS, with
+a local index fallback on other platforms. CLI commands should report token
+presence as booleans or storage names only, never token values.
 
 ## Mock server
 

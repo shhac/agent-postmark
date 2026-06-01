@@ -7,8 +7,8 @@ error hints, and no access to Postmark account or server tokens.
 ## Features
 
 - Keychain-first profiles: account and server tokens are never printed back.
-- Postmark-aware scope model: profiles can hold account token, server token,
-  default server ID, and default message stream.
+- Postmark-aware scope model: profiles can hold an optional account token and
+  multiple server-token contexts, each with its own default stream.
 - `profiles` primary command with hidden `auth` alias for sibling CLI familiarity.
 - LLM-shaped output: lists default to NDJSON, single resources default to JSON.
 - Structured errors: stderr JSON includes `fixable_by: agent|human|retry`.
@@ -21,10 +21,11 @@ error hints, and no access to Postmark account or server tokens.
 
 ```bash
 make build
-./agent-postmark profiles add prod --form --account-token --server-token --server 123 --stream outbound
+./agent-postmark profiles add prod --form --account-token
+./agent-postmark profiles servers add prod app --form --server-token --server-id 123 --stream outbound --default
 ./agent-postmark profiles check prod
 ./agent-postmark servers list
-./agent-postmark streams list --server 123
+./agent-postmark --server-id 123 streams list
 ./agent-postmark messages search --to user@example.com --count 20
 ./agent-postmark bounces list --email user@example.com
 ./agent-postmark suppressions check user@example.com
@@ -36,7 +37,7 @@ make build
 ```
 
 When an LLM is guiding setup, prefer `--form`. A native OS dialog asks the user
-for account and/or server tokens, and the CLI returns only a redacted receipt.
+for account or server tokens, and the CLI returns only a redacted receipt.
 
 `auth` is a hidden compatibility alias:
 
@@ -49,6 +50,8 @@ agent-postmark auth list
 Postmark account tokens are used for account-level resources like servers,
 domains, and sender signatures. Server tokens are used for delivery activity
 inside one server, including messages, bounces, delivery stats, and webhooks.
+They are independent: a profile can have only an account token, only server
+tokens, or both.
 
 ## Operational Commands
 
