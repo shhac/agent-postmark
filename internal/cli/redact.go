@@ -64,7 +64,7 @@ func redactValue(v any, path string) (any, []string) {
 			if path != "" {
 				nextPath = path + "." + k
 			}
-			if shouldRedact(k) {
+			if shouldRedact(k, child) {
 				out[k] = "[REDACTED]"
 				paths = append(paths, nextPath)
 				continue
@@ -88,13 +88,25 @@ func redactValue(v any, path string) (any, []string) {
 	}
 }
 
-func shouldRedact(key string) bool {
+func shouldRedact(key string, value any) bool {
 	if safeTokenMetadataKeys[key] {
 		return false
 	}
 	if sensitiveKeys[key] {
-		return true
+		return redactableValue(value)
 	}
 	lower := strings.ToLower(key)
-	return strings.Contains(lower, "token") || strings.Contains(lower, "secret")
+	if strings.Contains(lower, "token") || strings.Contains(lower, "secret") {
+		return redactableValue(value)
+	}
+	return false
+}
+
+func redactableValue(value any) bool {
+	switch value.(type) {
+	case string, []any, map[string]any:
+		return true
+	default:
+		return false
+	}
 }
