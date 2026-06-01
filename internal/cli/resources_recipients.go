@@ -11,6 +11,8 @@ import (
 	"github.com/shhac/agent-postmark/internal/api"
 )
 
+const suppressionListPathFormat = "/message-streams/%s/suppressions/list"
+
 func registerBounces(root *cobra.Command, globals *GlobalFlags) {
 	cmd := &cobra.Command{Use: "bounces", Short: "List and inspect bounces"}
 	var email, bounceType, inactive, tag, messageID, fromDate, toDate, stream string
@@ -70,11 +72,7 @@ func registerSuppressions(root *cobra.Command, globals *GlobalFlags) {
 				if stream == "" {
 					stream = resolved.MessageStream
 				}
-				q := url.Values{"count": {strconv.Itoa(count)}, "offset": {strconv.Itoa(offset)}}
-				addIfSet(q, "EmailAddress", email)
-				addIfSet(q, "SuppressionReason", reason)
-				addIfSet(q, "Origin", origin)
-				raw, err := resolved.Client.Get(ctx, api.ServerToken, fmt.Sprintf("/message-streams/%s/suppressions/list", stream), q)
+				raw, err := resolved.Client.Get(ctx, api.ServerToken, suppressionListPath(stream), suppressionListQuery(count, offset, email, reason, origin))
 				if err != nil {
 					return err
 				}
@@ -98,8 +96,7 @@ func registerSuppressions(root *cobra.Command, globals *GlobalFlags) {
 				if stream == "" {
 					stream = resolved.MessageStream
 				}
-				q := url.Values{"count": {"10"}, "offset": {"0"}, "EmailAddress": {args[0]}}
-				raw, err := resolved.Client.Get(ctx, api.ServerToken, fmt.Sprintf("/message-streams/%s/suppressions/list", stream), q)
+				raw, err := resolved.Client.Get(ctx, api.ServerToken, suppressionListPath(stream), suppressionListQuery(10, 0, args[0], "", ""))
 				if err != nil {
 					return err
 				}
@@ -146,4 +143,16 @@ func suppressionMutationCommand(use, short string, globals *GlobalFlags, deleteS
 	cmd.Flags().StringVar(&stream, "stream", "", "Message stream ID")
 	cmd.Flags().BoolVar(&yes, "yes", false, "Confirm this state-changing Postmark request")
 	return cmd
+}
+
+func suppressionListPath(stream string) string {
+	return fmt.Sprintf(suppressionListPathFormat, stream)
+}
+
+func suppressionListQuery(count, offset int, email, reason, origin string) url.Values {
+	q := paginationQuery(count, offset)
+	addIfSet(q, "EmailAddress", email)
+	addIfSet(q, "SuppressionReason", reason)
+	addIfSet(q, "Origin", origin)
+	return q
 }

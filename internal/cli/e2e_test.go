@@ -161,6 +161,41 @@ func TestProfilesListYAML(t *testing.T) {
 	}
 }
 
+func TestProfilesServersListIsSortedAndSecretSafe(t *testing.T) {
+	stdout, stderr, _ := runCLIWithSetup(t, func() {
+		if err := config.StoreProfile("prod", config.Profile{
+			DefaultServer: "app",
+			Servers: map[string]config.ServerProfile{
+				"zeta": {ServerID: 202, MessageStream: "broadcast"},
+				"app":  {ServerID: 101, MessageStream: "outbound"},
+			},
+		}); err != nil {
+			t.Fatalf("StoreProfile: %v", err)
+		}
+		if err := os.MkdirAll(config.ConfigDir(), 0o755); err != nil {
+			t.Fatalf("MkdirAll: %v", err)
+		}
+		index := []byte(`{"prod":{"account_token":true,"servers":{"zeta":true,"app":true}}}` + "\n")
+		if err := os.WriteFile(filepath.Join(config.ConfigDir(), "credentials.json"), index, 0o600); err != nil {
+			t.Fatalf("WriteFile: %v", err)
+		}
+	}, "profiles", "servers", "list", "prod")
+	if stderr != "" {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if strings.Contains(stdout, "[REDACTED]") || strings.Contains(stdout, "@redacted") {
+		t.Fatalf("credential presence should not be redacted: %s", stdout)
+	}
+	if !strings.Contains(stdout, `"server_token_configured":true`) {
+		t.Fatalf("server token presence missing: %s", stdout)
+	}
+	appIndex := strings.Index(stdout, `"server":"app"`)
+	zetaIndex := strings.Index(stdout, `"server":"zeta"`)
+	if appIndex < 0 || zetaIndex < 0 || appIndex > zetaIndex {
+		t.Fatalf("server rows should be sorted by alias: %s", stdout)
+	}
+}
+
 func TestServersListStreamsCompactNDJSON(t *testing.T) {
 	stdout, stderr, _ := runCLI(t, "servers", "list")
 	if stderr != "" {
@@ -265,7 +300,7 @@ func TestMessagesSearchCompactsAndRedacts(t *testing.T) {
 }
 
 func TestSuppressionsListUsesPaginatedListEndpoint(t *testing.T) {
-	stdout, stderr, doer := runCLI(t, "suppressions", "list", "--stream", "outbound", "--count", "1", "--offset", "0")
+	stdout, stderr, doer := runCLI(t, "suppressions", "list", "--stream", "outbound", "--count", "1", "--offset", "0", "--email", "user@example.com", "--reason", "ManualSuppression", "--origin", "Customer")
 	if stderr != "" {
 		t.Fatalf("stderr = %s", stderr)
 	}
@@ -275,7 +310,7 @@ func TestSuppressionsListUsesPaginatedListEndpoint(t *testing.T) {
 	if len(doer.paths) != 1 || doer.paths[0] != "/message-streams/outbound/suppressions/list" {
 		t.Fatalf("paths = %#v", doer.paths)
 	}
-	if doer.rawQueries[0] != "count=1&offset=0" {
+	if doer.rawQueries[0] != "EmailAddress=user%40example.com&Origin=Customer&SuppressionReason=ManualSuppression&count=1&offset=0" {
 		t.Fatalf("query = %q", doer.rawQueries[0])
 	}
 }

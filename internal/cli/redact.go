@@ -66,13 +66,13 @@ func redactValue(v any, path string) (any, []string) {
 			if path != "" {
 				nextPath = path + "." + k
 			}
-			if redacted, ok := redactURLUserinfo(child); ok {
-				out[k] = redacted
+			if shouldRedact(k, child) {
+				out[k] = "[REDACTED]"
 				paths = append(paths, nextPath)
 				continue
 			}
-			if shouldRedact(k, child) {
-				out[k] = "[REDACTED]"
+			if redacted, ok := redactURLUserinfo(child); ok {
+				out[k] = redacted
 				paths = append(paths, nextPath)
 				continue
 			}

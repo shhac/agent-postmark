@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"sort"
 
 	"github.com/spf13/cobra"
 
@@ -96,22 +97,49 @@ func registerAuthList(parent *cobra.Command, globals *GlobalFlags) {
 		Short: "List configured profiles without exposing tokens",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg := config.Read()
-			rows := make([]json.RawMessage, 0, len(cfg.Profiles))
-			for alias, profile := range cfg.Profiles {
-				row, _ := json.Marshal(map[string]any{
-					"profile":        alias,
-					"default":        alias == cfg.DefaultProfile,
-					"credential":     "keychain",
-					"credentials":    credential.Summary(alias),
-					"host":           profile.Host,
-					"default_server": profile.DefaultServer,
-					"servers":        profile.Servers,
-				})
-				rows = append(rows, row)
-			}
+			rows := profileListRows(cfg)
 			return writeList(rows, len(rows), 0, len(rows), "Profiles", globals.Format, false)
 		},
 	})
+}
+
+func profileListRows(cfg *config.Config) []json.RawMessage {
+	rows := make([]json.RawMessage, 0, len(cfg.Profiles))
+	for _, alias := range sortedProfileAliases(cfg.Profiles) {
+		rows = append(rows, profileListRow(alias, cfg.Profiles[alias], alias == cfg.DefaultProfile))
+	}
+	return rows
+}
+
+func profileListRow(alias string, profile config.Profile, isDefault bool) json.RawMessage {
+	row, _ := json.Marshal(map[string]any{
+		"profile":        alias,
+		"default":        isDefault,
+		"credential":     "keychain",
+		"credentials":    credential.Summary(alias),
+		"host":           profile.Host,
+		"default_server": profile.DefaultServer,
+		"servers":        profile.Servers,
+	})
+	return row
+}
+
+func sortedProfileAliases(profiles map[string]config.Profile) []string {
+	aliases := make([]string, 0, len(profiles))
+	for alias := range profiles {
+		aliases = append(aliases, alias)
+	}
+	sort.Strings(aliases)
+	return aliases
+}
+
+func sortedServerAliases(servers map[string]config.ServerProfile) []string {
+	aliases := make([]string, 0, len(servers))
+	for alias := range servers {
+		aliases = append(aliases, alias)
+	}
+	sort.Strings(aliases)
+	return aliases
 }
 
 func registerAuthRemove(parent *cobra.Command) {

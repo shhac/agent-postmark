@@ -160,24 +160,41 @@ func registerAuthServerList(parent *cobra.Command, globals *GlobalFlags) {
 				writeProfileCommandError(config.ErrProfileNotConfigured(args[0]))
 				return nil
 			}
-			rows := make([]json.RawMessage, 0, len(profile.Servers))
-			summary := credential.Summary(args[0])
-			serverTokens, _ := summary["server_tokens_configured"].(map[string]bool)
-			for alias, server := range profile.Servers {
-				row, _ := json.Marshal(map[string]any{
-					"profile":                 args[0],
-					"server":                  alias,
-					"default":                 alias == profile.DefaultServer,
-					"server_id":               server.ServerID,
-					"message_stream":          server.MessageStream,
-					"credential":              "keychain",
-					"server_token_configured": serverTokens[alias],
-				})
-				rows = append(rows, row)
-			}
+			rows := profileServerListRows(args[0], profile)
 			return writeList(rows, len(rows), 0, len(rows), "ProfileServers", globals.Format, false)
 		},
 	})
+}
+
+func profileServerListRows(profileAlias string, profile config.Profile) []json.RawMessage {
+	rows := make([]json.RawMessage, 0, len(profile.Servers))
+	serverTokens := configuredServerTokens(profileAlias)
+	for _, alias := range sortedServerAliases(profile.Servers) {
+		rows = append(rows, profileServerListRow(profileAlias, alias, profile.Servers[alias], alias == profile.DefaultServer, serverTokens[alias]))
+	}
+	return rows
+}
+
+func profileServerListRow(profileAlias, serverAlias string, server config.ServerProfile, isDefault, tokenConfigured bool) json.RawMessage {
+	row, _ := json.Marshal(map[string]any{
+		"profile":                 profileAlias,
+		"server":                  serverAlias,
+		"default":                 isDefault,
+		"server_id":               server.ServerID,
+		"message_stream":          server.MessageStream,
+		"credential":              "keychain",
+		"server_token_configured": tokenConfigured,
+	})
+	return row
+}
+
+func configuredServerTokens(profileAlias string) map[string]bool {
+	summary := credential.Summary(profileAlias)
+	serverTokens, _ := summary["server_tokens_configured"].(map[string]bool)
+	if serverTokens == nil {
+		return map[string]bool{}
+	}
+	return serverTokens
 }
 
 func registerAuthServerRemove(parent *cobra.Command) {

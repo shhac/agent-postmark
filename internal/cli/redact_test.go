@@ -85,6 +85,20 @@ func TestRedactWebhookURLUserinfo(t *testing.T) {
 	}
 }
 
+func TestRedactKeySensitivityWinsOverURLUserinfo(t *testing.T) {
+	raw := redactRaw([]byte(`{"ApiToken":"https://postmark:password@example.com/token","Url":"https://postmark:password@example.com/hook"}`))
+	got := string(raw)
+	if strings.Contains(got, "postmark:password") || strings.Contains(got, "/token") {
+		t.Fatalf("sensitive URL-shaped token leaked: %s", got)
+	}
+	if !strings.Contains(got, `"ApiToken":"[REDACTED]"`) {
+		t.Fatalf("token key should be fully redacted: %s", got)
+	}
+	if !strings.Contains(got, `"Url":"https://[REDACTED]@example.com/hook"`) {
+		t.Fatalf("non-sensitive URL userinfo should be redacted as URL: %s", got)
+	}
+}
+
 func TestRedactDeduplicatesArrayPaths(t *testing.T) {
 	raw := redactRaw([]byte(`{"Suppressions":[{"EmailAddress":"a@example.com"},{"EmailAddress":"b@example.com"}]}`))
 	got := string(raw)
