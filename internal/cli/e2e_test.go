@@ -125,8 +125,8 @@ func TestProfilesListShowsCredentialPresenceWithoutRedaction(t *testing.T) {
 	if strings.Contains(stdout, "[REDACTED]") || strings.Contains(stdout, "@redacted") {
 		t.Fatalf("credential presence should not be redacted: %s", stdout)
 	}
-	if strings.Contains(stdout, "account_token") || strings.Contains(stdout, "server_token") {
-		t.Fatalf("profile list should avoid token-shaped metadata keys: %s", stdout)
+	if !strings.Contains(stdout, "account_token_configured") || !strings.Contains(stdout, "server_tokens_configured") {
+		t.Fatalf("profile list should use explicit configured token metadata keys: %s", stdout)
 	}
 
 	var row map[string]any
@@ -137,12 +137,12 @@ func TestProfilesListShowsCredentialPresenceWithoutRedaction(t *testing.T) {
 	if !ok {
 		t.Fatalf("credentials missing from %v", row)
 	}
-	if credentials["account"] != true {
-		t.Fatalf("account credential presence = %#v", credentials["account"])
+	if credentials["account_token_configured"] != true {
+		t.Fatalf("account token presence = %#v", credentials["account_token_configured"])
 	}
-	servers, ok := credentials["servers"].(map[string]any)
+	servers, ok := credentials["server_tokens_configured"].(map[string]any)
 	if !ok || servers["app"] != true {
-		t.Fatalf("server credential presence = %#v", credentials["servers"])
+		t.Fatalf("server token presence = %#v", credentials["server_tokens_configured"])
 	}
 }
 
@@ -151,7 +151,7 @@ func TestProfilesListYAML(t *testing.T) {
 	if stderr != "" {
 		t.Fatalf("stderr = %s", stderr)
 	}
-	if !strings.Contains(stdout, "results:") || !strings.Contains(stdout, "credentials:") || !strings.Contains(stdout, "account: true") || !strings.Contains(stdout, "server_id: 101") {
+	if !strings.Contains(stdout, "results:") || !strings.Contains(stdout, "account_token_configured: true") || !strings.Contains(stdout, "server_tokens_configured:") || !strings.Contains(stdout, "server_id: 101") {
 		t.Fatalf("stdout = %s", stdout)
 	}
 	if strings.Contains(stdout, "[REDACTED]") || strings.Contains(stdout, "@redacted") {

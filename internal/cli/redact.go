@@ -29,6 +29,12 @@ var sensitiveKeys = map[string]bool{
 	"ReturnPathDomain": false,
 }
 
+var safeTokenMetadataKeys = map[string]bool{
+	"account_token_configured": true,
+	"server_token_configured":  true,
+	"server_tokens_configured": true,
+}
+
 func redactRaw(raw json.RawMessage) json.RawMessage {
 	var decoded any
 	if err := json.Unmarshal(raw, &decoded); err != nil {
@@ -83,6 +89,9 @@ func redactValue(v any, path string) (any, []string) {
 }
 
 func shouldRedact(key string) bool {
+	if safeTokenMetadataKeys[key] {
+		return false
+	}
 	if sensitiveKeys[key] {
 		return true
 	}

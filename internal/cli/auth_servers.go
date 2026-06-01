@@ -162,16 +162,16 @@ func registerAuthServerList(parent *cobra.Command, globals *GlobalFlags) {
 			}
 			rows := make([]json.RawMessage, 0, len(profile.Servers))
 			summary := credential.Summary(args[0])
-			serverTokens, _ := summary["servers"].(map[string]bool)
+			serverTokens, _ := summary["server_tokens_configured"].(map[string]bool)
 			for alias, server := range profile.Servers {
 				row, _ := json.Marshal(map[string]any{
-					"profile":        args[0],
-					"server":         alias,
-					"default":        alias == profile.DefaultServer,
-					"server_id":      server.ServerID,
-					"message_stream": server.MessageStream,
-					"credential":     "keychain",
-					"configured":     serverTokens[alias],
+					"profile":                 args[0],
+					"server":                  alias,
+					"default":                 alias == profile.DefaultServer,
+					"server_id":               server.ServerID,
+					"message_stream":          server.MessageStream,
+					"credential":              "keychain",
+					"server_token_configured": serverTokens[alias],
 				})
 				rows = append(rows, row)
 			}
