@@ -112,6 +112,7 @@ func mockRoutes() []route {
 		itemRoute(http.MethodPut, "/bounces/9001/activate", "PUT  /bounces/{id}/activate", func() any {
 			return map[string]any{"Message": "OK", "BounceID": 9001}
 		}),
+		listRoute(http.MethodGet, "/message-streams/outbound/suppressions/list", "Suppressions", staticList(suppressions), display("GET  /message-streams/{stream}/suppressions/list")),
 		listRoute(http.MethodGet, "/message-streams/outbound/suppressions/dump", "Suppressions", staticList(suppressions), display("GET  /message-streams/{stream}/suppressions/dump")),
 		itemRoute(http.MethodPost, "/message-streams/outbound/suppressions", "POST /message-streams/{stream}/suppressions", func() any {
 			return map[string]any{"Status": "created", "EmailAddress": "manual@example.com"}

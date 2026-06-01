@@ -262,6 +262,32 @@ func TestMessagesSearchCompactsAndRedacts(t *testing.T) {
 	}
 }
 
+func TestSuppressionsListUsesPaginatedListEndpoint(t *testing.T) {
+	stdout, stderr, doer := runCLI(t, "suppressions", "list", "--stream", "outbound", "--count", "1", "--offset", "0")
+	if stderr != "" {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if !strings.Contains(stdout, `"EmailAddress":"[REDACTED]"`) || strings.Contains(stdout, "user@example.com") {
+		t.Fatalf("stdout = %s", stdout)
+	}
+	if len(doer.paths) != 1 || doer.paths[0] != "/message-streams/outbound/suppressions/list" {
+		t.Fatalf("paths = %#v", doer.paths)
+	}
+	if doer.rawQueries[0] != "count=1&offset=0" {
+		t.Fatalf("query = %q", doer.rawQueries[0])
+	}
+}
+
+func TestSuppressionsDumpAliasUsesPaginatedListEndpoint(t *testing.T) {
+	_, stderr, doer := runCLI(t, "suppressions", "dump", "--stream", "outbound", "--count", "1", "--offset", "0")
+	if stderr != "" {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if len(doer.paths) != 1 || doer.paths[0] != "/message-streams/outbound/suppressions/list" {
+		t.Fatalf("paths = %#v", doer.paths)
+	}
+}
+
 func TestInvestigateDeliveryEmitsCriticalBounceFinding(t *testing.T) {
 	stdout, stderr, _ := runCLI(t, "investigate", "delivery", "--email", "user@example.com")
 	if stderr != "" {
@@ -322,12 +348,15 @@ func TestInvestigateDomainHealth(t *testing.T) {
 }
 
 func TestInvestigateStreamHealth(t *testing.T) {
-	stdout, stderr, _ := runCLI(t, "investigate", "stream-health", "--stream", "outbound")
+	stdout, stderr, doer := runCLI(t, "investigate", "stream-health", "--stream", "outbound")
 	if stderr != "" {
 		t.Fatalf("stderr = %s", stderr)
 	}
 	if !strings.Contains(stdout, `"object":"delivery_stats"`) || !strings.Contains(stdout, `"object":"suppressions"`) {
 		t.Fatalf("stdout = %s", stdout)
+	}
+	if len(doer.paths) != 4 || doer.paths[3] != "/message-streams/outbound/suppressions/list" {
+		t.Fatalf("paths = %#v", doer.paths)
 	}
 }
 

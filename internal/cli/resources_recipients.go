@@ -62,9 +62,10 @@ func registerSuppressions(root *cobra.Command, globals *GlobalFlags) {
 	cmd := &cobra.Command{Use: "suppressions", Short: "Check and manage suppressions"}
 	var email, reason, origin, stream string
 	var count, offset int
-	dump := &cobra.Command{
-		Use:   "dump",
-		Short: "Dump suppressions for a message stream",
+	list := &cobra.Command{
+		Use:     "list",
+		Aliases: []string{"dump"},
+		Short:   "List suppressions for a message stream",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return withClient(cmd.Context(), globals, func(ctx context.Context, resolved *resolvedContext) error {
 				if stream == "" {
@@ -74,7 +75,7 @@ func registerSuppressions(root *cobra.Command, globals *GlobalFlags) {
 				addIfSet(q, "EmailAddress", email)
 				addIfSet(q, "SuppressionReason", reason)
 				addIfSet(q, "Origin", origin)
-				raw, err := resolved.Client.Get(ctx, api.ServerToken, fmt.Sprintf("/message-streams/%s/suppressions/dump", stream), q)
+				raw, err := resolved.Client.Get(ctx, api.ServerToken, fmt.Sprintf("/message-streams/%s/suppressions/list", stream), q)
 				if err != nil {
 					return err
 				}
@@ -82,12 +83,12 @@ func registerSuppressions(root *cobra.Command, globals *GlobalFlags) {
 			})
 		},
 	}
-	dump.Flags().StringVar(&email, "email", "", "Email address filter")
-	dump.Flags().StringVar(&reason, "reason", "", "Suppression reason filter")
-	dump.Flags().StringVar(&origin, "origin", "", "Suppression origin filter")
-	dump.Flags().StringVar(&stream, "stream", "", "Message stream ID")
-	addCountOffsetFlags(dump, &count, &offset)
-	cmd.AddCommand(dump)
+	list.Flags().StringVar(&email, "email", "", "Email address filter")
+	list.Flags().StringVar(&reason, "reason", "", "Suppression reason filter")
+	list.Flags().StringVar(&origin, "origin", "", "Suppression origin filter")
+	list.Flags().StringVar(&stream, "stream", "", "Message stream ID")
+	addCountOffsetFlags(list, &count, &offset)
+	cmd.AddCommand(list)
 
 	check := &cobra.Command{
 		Use:   "check <email>",
@@ -99,7 +100,7 @@ func registerSuppressions(root *cobra.Command, globals *GlobalFlags) {
 					stream = resolved.MessageStream
 				}
 				q := url.Values{"count": {"10"}, "offset": {"0"}, "EmailAddress": {args[0]}}
-				raw, err := resolved.Client.Get(ctx, api.ServerToken, fmt.Sprintf("/message-streams/%s/suppressions/dump", stream), q)
+				raw, err := resolved.Client.Get(ctx, api.ServerToken, fmt.Sprintf("/message-streams/%s/suppressions/list", stream), q)
 				if err != nil {
 					return err
 				}

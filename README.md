@@ -79,7 +79,7 @@ agent-postmark messages opens --message-id <message-id>
 agent-postmark messages clicks --count 20
 agent-postmark messages clicks --message-id <message-id>
 agent-postmark bounces dump <bounce-id>
-agent-postmark suppressions dump --stream outbound
+agent-postmark suppressions list --stream outbound
 agent-postmark suppressions check user@example.com
 agent-postmark webhooks health
 agent-postmark investigate webhook-health

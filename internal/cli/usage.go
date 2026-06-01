@@ -42,7 +42,7 @@ func registerUsage(root *cobra.Command) {
 					"agent-postmark messages clicks --count 20",
 					"agent-postmark messages clicks --message-id <message-id>",
 					"agent-postmark bounces dump <bounce-id>",
-					"agent-postmark suppressions dump --stream outbound",
+					"agent-postmark suppressions list --stream outbound",
 					"agent-postmark webhooks health",
 				},
 				"mutations": []string{

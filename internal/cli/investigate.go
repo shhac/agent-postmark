@@ -143,7 +143,7 @@ func registerInvestigateStreamHealth(parent *cobra.Command, globals *GlobalFlags
 				if err != nil {
 					return err
 				}
-				suppressionRaw, err := resolved.Client.Get(ctx, api.ServerToken, fmt.Sprintf("/message-streams/%s/suppressions/dump", stream), url.Values{"count": {"20"}, "offset": {"0"}})
+				suppressionRaw, err := resolved.Client.Get(ctx, api.ServerToken, fmt.Sprintf("/message-streams/%s/suppressions/list", stream), url.Values{"count": {"20"}, "offset": {"0"}})
 				if err != nil {
 					return err
 				}

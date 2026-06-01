@@ -67,7 +67,7 @@ agent-postmark
 ├── webhooks          list, get
 ├── messages          search, inbound-search, opens, clicks, get, dump, inbound-get, inbound-retry, inbound-bypass
 ├── bounces           list, get, dump, activate
-├── suppressions      dump, check, create, delete
+├── suppressions      list, check, create, delete
 ├── stats             delivery
 ├── investigate       delivery, bounce, domain-health, stream-health, webhook-health
 ├── api               get

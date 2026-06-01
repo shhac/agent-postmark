@@ -51,7 +51,7 @@ agent-postmark messages clicks --message-id <message-id>
 agent-postmark bounces list --email user@example.com
 agent-postmark bounces get <bounce-id>
 agent-postmark bounces dump <bounce-id>
-agent-postmark suppressions dump --stream outbound
+agent-postmark suppressions list --stream outbound
 agent-postmark suppressions check user@example.com
 agent-postmark webhooks list
 agent-postmark webhooks health
