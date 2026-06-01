@@ -207,4 +207,18 @@ func envInt(name string) int {
 func addCountOffsetFlags(cmd *cobra.Command, count *int, offset *int) {
 	cmd.Flags().IntVar(count, "count", 50, "Number of records to request")
 	cmd.Flags().IntVar(offset, "offset", 0, "Number of records to skip")
+	runE := cmd.RunE
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		if *count < 0 {
+			output.WriteError(output.Stderr(), agenterrors.New("invalid --count", agenterrors.FixableByAgent).
+				WithHint("Use --count 0 or a positive number. To mirror a UI page, use --offset (page-1)*count."))
+			return nil
+		}
+		if *offset < 0 {
+			output.WriteError(output.Stderr(), agenterrors.New("invalid --offset", agenterrors.FixableByAgent).
+				WithHint("Use --offset 0 or a positive number. To mirror page 6 with --count 50, use --offset 250."))
+			return nil
+		}
+		return runE(cmd, args)
+	}
 }

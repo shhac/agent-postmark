@@ -17,7 +17,7 @@ Sources:
 | `servers` | `X-Postmark-Account-Token` | Server inventory is account-level. |
 | `domains` | `X-Postmark-Account-Token` | Sender domains are account-level. |
 | `signatures` | `X-Postmark-Account-Token` | Sender signatures are account-level. |
-| `streams list` with `--server-id` | `X-Postmark-Account-Token` | Listing streams for a server is account/server management. |
+| `streams` | `X-Postmark-Server-Token` | Message streams are scoped to one server token. |
 | `messages` | `X-Postmark-Server-Token` | Message activity belongs to one server token. |
 | `bounces` | `X-Postmark-Server-Token` | Bounce activity belongs to one server token. |
 | `stats delivery` | `X-Postmark-Server-Token` | Delivery stats are server-level. |
@@ -29,7 +29,7 @@ Sources:
 | --- | --- | --- |
 | `servers list` | `GET /servers?count=&offset=` | NDJSON rows from `Servers`; pagination meta from `TotalCount`. |
 | `servers get <id>` | `GET /servers/{id}` | Redacted JSON. |
-| `streams list` | `GET /servers/{id}/message-streams` | Uses the selected profile server's numeric ID or `--server-id`; NDJSON rows from `MessageStreams`. |
+| `streams list` | `GET /message-streams` | Uses the selected profile server token; NDJSON rows from `MessageStreams`. |
 | `streams get <id>` | `GET /message-streams/{id}` | Redacted JSON. |
 | `domains list` | `GET /domains?count=&offset=` | NDJSON rows from `Domains`. |
 | `domains get <id>` | `GET /domains/{id}` | Redacted JSON. |
@@ -54,7 +54,7 @@ Sources:
 | `bounces get <id>` | `GET /bounces/{id}` | Redacted JSON. |
 | `bounces dump <id>` | `GET /bounces/{id}/dump` | Redacted JSON; body redacted by default. |
 | `bounces activate <id> --yes` | `PUT /bounces/{id}/activate` | Guarded mutation. |
-| `suppressions dump` | `GET /message-streams/{stream}/suppressions/dump` | NDJSON rows from `Suppressions`. |
+| `suppressions dump` | `GET /message-streams/{stream}/suppressions/dump` | NDJSON rows from `Suppressions`; CLI applies local `--count/--offset` because Postmark currently returns the full stream dump. API probes with `page`, `Page`, `count/offset`, and `Count/Offset` did not paginate this endpoint. |
 | `suppressions check <email>` | `GET /message-streams/{stream}/suppressions/dump?EmailAddress=...` | NDJSON rows from `Suppressions`. |
 | `suppressions create <email> --yes` | `POST /message-streams/{stream}/suppressions` | Guarded mutation. |
 | `suppressions delete <email> --yes` | `POST /message-streams/{stream}/suppressions/delete` | Guarded mutation. |

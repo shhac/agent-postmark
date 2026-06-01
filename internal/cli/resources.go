@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 
 	"github.com/spf13/cobra"
@@ -36,10 +35,7 @@ func registerStreams(root *cobra.Command, globals *GlobalFlags) {
 		Short: "List message streams",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return withClient(cmd.Context(), globals, func(ctx context.Context, resolved *resolvedContext) error {
-				if err := requireServer(resolved); err != nil {
-					return err
-				}
-				raw, err := resolved.Client.Get(ctx, api.AccountToken, fmt.Sprintf("/servers/%d/message-streams", resolved.ServerID), url.Values{})
+				raw, err := resolved.Client.Get(ctx, api.ServerToken, "/message-streams", url.Values{})
 				if err != nil {
 					return err
 				}
@@ -47,7 +43,7 @@ func registerStreams(root *cobra.Command, globals *GlobalFlags) {
 			})
 		},
 	})
-	cmd.AddCommand(accountGetCommand("get <stream-id>", "Get a message stream", globals, "/message-streams/%s"))
+	cmd.AddCommand(serverGetCommand("get <stream-id>", "Get a message stream", globals, "/message-streams/%s"))
 	root.AddCommand(cmd)
 }
 

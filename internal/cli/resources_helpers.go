@@ -122,12 +122,18 @@ func writeEnvelopeListWithPage(raw json.RawMessage, field string, offset, count 
 		return writeRaw(raw, format)
 	}
 	var total int
+	hasTotal := false
 	if totalRaw, ok := payload["TotalCount"]; ok {
+		hasTotal = true
 		_ = json.Unmarshal(totalRaw, &total)
 	}
 	var items []json.RawMessage
 	if listRaw, ok := payload[field]; ok {
 		_ = json.Unmarshal(listRaw, &items)
+	}
+	if !hasTotal {
+		total = len(items)
+		items = localPage(items, offset, count)
 	}
 	if count == 0 {
 		count = len(items)
@@ -136,6 +142,23 @@ func writeEnvelopeListWithPage(raw json.RawMessage, field string, offset, count 
 		total = len(items)
 	}
 	return writeList(items, total, offset, count, field, format, full)
+}
+
+func localPage(items []json.RawMessage, offset, count int) []json.RawMessage {
+	if offset < 0 {
+		offset = 0
+	}
+	if offset > len(items) {
+		offset = len(items)
+	}
+	if count <= 0 {
+		return items[offset:]
+	}
+	end := offset + count
+	if end > len(items) {
+		end = len(items)
+	}
+	return items[offset:end]
 }
 
 func addIfSet(q url.Values, key, value string) {

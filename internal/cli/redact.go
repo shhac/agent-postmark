@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"net/url"
 	"sort"
 	"strings"
 )
@@ -43,6 +44,7 @@ func redactRaw(raw json.RawMessage) json.RawMessage {
 	redacted, paths := redactValue(decoded, "")
 	if len(paths) > 0 {
 		sort.Strings(paths)
+		paths = uniqueStrings(paths)
 		if m, ok := redacted.(map[string]any); ok {
 			m["@redacted"] = paths
 		}
@@ -63,6 +65,11 @@ func redactValue(v any, path string) (any, []string) {
 			nextPath := k
 			if path != "" {
 				nextPath = path + "." + k
+			}
+			if redacted, ok := redactURLUserinfo(child); ok {
+				out[k] = redacted
+				paths = append(paths, nextPath)
+				continue
 			}
 			if shouldRedact(k, child) {
 				out[k] = "[REDACTED]"
@@ -88,8 +95,31 @@ func redactValue(v any, path string) (any, []string) {
 	}
 }
 
+func redactURLUserinfo(value any) (string, bool) {
+	raw, ok := value.(string)
+	if !ok || raw == "" {
+		return "", false
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.User == nil || parsed.Scheme == "" || parsed.Host == "" {
+		return "", false
+	}
+	out := parsed.Scheme + "://[REDACTED]@" + parsed.Host
+	if parsed.Opaque != "" {
+		out += parsed.Opaque
+	}
+	out += parsed.EscapedPath()
+	if parsed.RawQuery != "" {
+		out += "?" + parsed.RawQuery
+	}
+	if parsed.Fragment != "" {
+		out += "#" + parsed.EscapedFragment()
+	}
+	return out, true
+}
+
 func shouldRedact(key string, value any) bool {
-	if safeTokenMetadataKeys[key] {
+	if safeTokenMetadataKeys[key] && safeTokenMetadataValue(key, value) {
 		return false
 	}
 	if sensitiveKeys[key] {
@@ -102,6 +132,27 @@ func shouldRedact(key string, value any) bool {
 	return false
 }
 
+func safeTokenMetadataValue(key string, value any) bool {
+	switch key {
+	case "account_token_configured", "server_token_configured":
+		_, ok := value.(bool)
+		return ok
+	case "server_tokens_configured":
+		servers, ok := value.(map[string]any)
+		if !ok {
+			return false
+		}
+		for _, configured := range servers {
+			if _, ok := configured.(bool); !ok {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
+}
+
 func redactableValue(value any) bool {
 	switch value.(type) {
 	case string, []any, map[string]any:
@@ -109,4 +160,17 @@ func redactableValue(value any) bool {
 	default:
 		return false
 	}
+}
+
+func uniqueStrings(sorted []string) []string {
+	if len(sorted) < 2 {
+		return sorted
+	}
+	out := sorted[:1]
+	for _, value := range sorted[1:] {
+		if value != out[len(out)-1] {
+			out = append(out, value)
+		}
+	}
+	return out
 }

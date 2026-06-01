@@ -8,7 +8,7 @@ import (
 func TestDeliveryFindingsNoActivitySuggestsStreamSearch(t *testing.T) {
 	records := deliveryFindings("user@example.com", "outbound", deliverySearchEvidence{})
 	assertRecord(t, records, "finding", "severity", "warning")
-	assertRecord(t, records, "next_command", "command", "agent-postmark --server-id <server-id> streams list")
+	assertRecord(t, records, "next_command", "command", "agent-postmark --server <server> streams list")
 	assertRecord(t, records, "next_command", "command", "agent-postmark messages search --to <email> --stream <other-stream>")
 }
 

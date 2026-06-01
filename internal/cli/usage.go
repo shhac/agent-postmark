@@ -22,7 +22,7 @@ func registerUsage(root *cobra.Command) {
 				},
 				"discover": []string{
 					"agent-postmark servers list",
-					"agent-postmark --server-id <id> streams list",
+					"agent-postmark --server <alias> streams list",
 					"agent-postmark domains list",
 					"agent-postmark signatures list",
 					"agent-postmark webhooks list",

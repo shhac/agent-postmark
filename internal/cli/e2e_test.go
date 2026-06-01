@@ -210,7 +210,7 @@ func TestProfileServerAliasProvidesServerID(t *testing.T) {
 	if !strings.Contains(stdout, `"ID":"outbound"`) || !strings.Contains(stdout, `"ID":"broadcasts"`) {
 		t.Fatalf("stdout = %s", stdout)
 	}
-	if len(doer.paths) != 1 || doer.paths[0] != "/servers/101/message-streams" {
+	if len(doer.paths) != 1 || doer.paths[0] != "/message-streams" {
 		t.Fatalf("paths = %#v", doer.paths)
 	}
 }
@@ -228,6 +228,24 @@ func TestProfilesCheckUsesRequiredServerPagination(t *testing.T) {
 	}
 	if doer.rawQueries[0] != "count=1&offset=0" {
 		t.Fatalf("profile check /servers query = %q", doer.rawQueries[0])
+	}
+}
+
+func TestListPaginationRejectsNegativeValuesWithHints(t *testing.T) {
+	_, stderr, doer := runCLI(t, "messages", "search", "--count", "-1")
+	if doer.calls != 0 {
+		t.Fatalf("negative count should not call API, calls = %d", doer.calls)
+	}
+	if !strings.Contains(stderr, `"error":"invalid --count"`) || !strings.Contains(stderr, `"fixable_by":"agent"`) || !strings.Contains(stderr, "page-1") {
+		t.Fatalf("stderr = %s", stderr)
+	}
+
+	_, stderr, doer = runCLI(t, "messages", "search", "--offset", "-1")
+	if doer.calls != 0 {
+		t.Fatalf("negative offset should not call API, calls = %d", doer.calls)
+	}
+	if !strings.Contains(stderr, `"error":"invalid --offset"`) || !strings.Contains(stderr, `"fixable_by":"agent"`) || !strings.Contains(stderr, "page 6") {
+		t.Fatalf("stderr = %s", stderr)
 	}
 }
 

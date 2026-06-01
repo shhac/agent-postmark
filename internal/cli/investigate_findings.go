@@ -10,7 +10,7 @@ func deliveryFindings(email, stream string, evidence deliverySearchEvidence) []e
 				"email":  email,
 				"stream": stream,
 			}),
-			nextCommandRecord("agent-postmark --server-id <server-id> streams list", "Confirm the stream used for this message."),
+			nextCommandRecord("agent-postmark --server <server> streams list", "Confirm the stream used for this message."),
 			nextCommandRecord("agent-postmark messages search --to <email> --stream <other-stream>", "Retry in another likely message stream."),
 		)
 	}

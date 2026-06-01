@@ -72,7 +72,8 @@ func mockRoutes() []route {
 	return []route{
 		listRoute(http.MethodGet, "/servers", "Servers", staticList(servers)),
 		itemRoute(http.MethodGet, "/servers/101", "GET  /servers/{id}", func() any { return servers()[0] }),
-		listRoute(http.MethodGet, "/servers/101/message-streams", "MessageStreams", staticList(streams), display("GET  /servers/{id}/message-streams")),
+		listRoute(http.MethodGet, "/message-streams", "MessageStreams", staticList(streams)),
+		itemRoute(http.MethodGet, "/message-streams/outbound", "GET  /message-streams/{id}", func() any { return streams()[0] }),
 		listRoute(http.MethodGet, "/domains", "Domains", staticList(domains)),
 		itemRoute(http.MethodGet, "/domains/501", "GET  /domains/{id}", func() any { return domains()[0] }),
 		itemRoute(http.MethodPost, "/domains/501/verifyDkim", "POST /domains/{id}/verifyDkim", func() any { return map[string]any{"DKIMVerified": true} }),
