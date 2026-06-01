@@ -28,7 +28,7 @@ make build
 ./agent-postmark profiles servers add prod app --form --server-token --server-id 123 --stream outbound --default
 ./agent-postmark profiles check prod
 ./agent-postmark servers list
-./agent-postmark --server-id 123 streams list
+./agent-postmark --server app streams list
 ./agent-postmark messages search --to user@example.com --count 20
 ./agent-postmark bounces list --email user@example.com
 ./agent-postmark suppressions check user@example.com
@@ -51,10 +51,10 @@ agent-postmark auth list
 ## Token Scopes
 
 Postmark account tokens are used for account-level resources like servers,
-domains, and sender signatures. Server tokens are used for delivery activity
-inside one server, including messages, bounces, delivery stats, and webhooks.
-They are independent: a profile can have only an account token, only server
-tokens, or both.
+domains, and sender signatures. Server tokens are used for one server's scoped
+resources, including message streams, messages, bounces, delivery stats,
+webhooks, and suppressions. They are independent: a profile can have only an
+account token, only server tokens, or both.
 
 Rotate tokens without changing profile metadata:
 
@@ -84,6 +84,10 @@ agent-postmark suppressions check user@example.com
 agent-postmark webhooks health
 agent-postmark investigate webhook-health
 ```
+
+Use `suppressions list` for paginated suppression reads. Postmark also has a
+`/suppressions/dump` API endpoint, but the CLI intentionally does not expose it
+as a command because it can return very large full exports.
 
 State-changing commands require `--yes`:
 

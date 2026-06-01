@@ -21,11 +21,10 @@ The CLI should feel like the sibling projects:
 Postmark has two API token scopes:
 
 - Account token: sent as `X-Postmark-Account-Token`; used for account-level
-  resources such as servers, domains, sender signatures, and some stream
-  management.
+  resources such as servers, domains, and sender signatures.
 - Server token: sent as `X-Postmark-Server-Token`; used for one server's
-  delivery activity such as messages, bounces, delivery stats, webhooks, and
-  sending.
+  scoped resources such as message streams, messages, bounces, delivery stats,
+  webhooks, suppressions, and sending.
 
 That means the local object managed by the CLI is not just "auth". It is a
 profile:

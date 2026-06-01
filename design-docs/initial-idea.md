@@ -46,10 +46,10 @@ Design principles:
 Initial command groups:
 
 ```bash
-agent-postmark auth add prod --form
-agent-postmark auth check prod
+agent-postmark profiles add prod --form --account-token
+agent-postmark profiles check prod
 agent-postmark servers list
-agent-postmark --server-id <server-id> streams list
+agent-postmark --server <server-alias> streams list
 agent-postmark signatures list
 agent-postmark signatures get <signature-id>
 agent-postmark domains list
@@ -78,8 +78,8 @@ agent-postmark investigate stream-health --stream outbound --since 7d
 Potential mutation commands, behind explicit flags or confirmation gates:
 
 ```bash
-agent-postmark suppressions create user@example.com --reason "customer requested block"
-agent-postmark suppressions delete user@example.com
+agent-postmark suppressions create user@example.com --yes
+agent-postmark suppressions delete user@example.com --yes
 agent-postmark webhooks update <webhook-id> --url https://example.com/postmark
 agent-postmark inbound retry <message-id>
 ```
@@ -97,7 +97,8 @@ The tool is not a replacement for Postmark's existing CLI. It fills the operatio
 ## Open Questions
 
 - Should v1 be strictly read-only?
-- Should server-token and account-token profiles be modeled separately?
+- How much should the CLI surface account-token and server-token context
+  switching beyond the current profile plus server-alias model?
 - Which message fields should be redacted by default?
 - Should template workflows be omitted initially since the existing CLI already handles them?
 - Should the CLI include safe SMTP/API send-test commands, or avoid sending entirely in v1?

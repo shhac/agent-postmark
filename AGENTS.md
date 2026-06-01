@@ -8,7 +8,7 @@ Postmark delivery triage CLI for AI agents.
   `auth` is a hidden compatibility alias only.
 - Preserve Postmark's account-token/server-token distinction:
   - account token: servers, domains, sender signatures, account/server setup
-  - server token: messages, bounces, stats, webhooks, suppressions
+  - server token: message streams, messages, bounces, stats, webhooks, suppressions
 - Never print stored tokens. Secrets live in Keychain; config files contain only
   non-secret metadata.
 - Prefer read-only commands. Any command that can change Postmark state must

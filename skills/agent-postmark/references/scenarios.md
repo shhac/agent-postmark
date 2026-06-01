@@ -62,7 +62,7 @@ support workflows.
 ## Is this in the wrong stream?
 
 ```bash
-agent-postmark --server-id <server-id> streams list
+agent-postmark --server <server-alias> streams list
 agent-postmark investigate stream-health --stream outbound
 agent-postmark messages search --to user@example.com --stream broadcasts
 ```

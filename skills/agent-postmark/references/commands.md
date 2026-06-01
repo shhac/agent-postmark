@@ -26,8 +26,6 @@ agent-postmark auth list
 ```bash
 agent-postmark servers list
 agent-postmark servers get <server-id>
-agent-postmark --server-id <server-id> streams list
-agent-postmark streams get <stream-id>
 agent-postmark domains list
 agent-postmark domains get <domain-id>
 agent-postmark domains verify-dkim <domain-id> --yes
@@ -39,6 +37,8 @@ agent-postmark signatures get <signature-id>
 ## Server-token commands
 
 ```bash
+agent-postmark --server <server-alias> streams list
+agent-postmark --server <server-alias> streams get <stream-id>
 agent-postmark messages search --to user@example.com --stream outbound
 agent-postmark messages inbound-search --from reply@example.com
 agent-postmark messages get <message-id>
@@ -57,6 +57,10 @@ agent-postmark webhooks list
 agent-postmark webhooks health
 agent-postmark stats delivery
 ```
+
+Use `suppressions list` for paginated reads. Do not use Postmark's raw
+`/suppressions/dump` endpoint for routine agent workflows; it can return a full
+stream export.
 
 Guarded mutations:
 

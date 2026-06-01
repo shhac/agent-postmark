@@ -32,9 +32,12 @@ webhooks.
 - Use `agent-postmark profiles servers remove <profile> <server>` to remove a
   server context and its stored token.
 - Prefer read-only commands.
-- Remember token scope: account-token commands handle servers, domains, streams,
-  and signatures; server-token commands handle messages, bounces, stats,
-  suppressions, and webhooks.
+- Remember token scope: account-token commands handle servers, domains, and
+  signatures; server-token commands handle message streams, messages, bounces,
+  stats, suppressions, and webhooks.
+- Use `agent-postmark suppressions list`, not a raw suppression dump, when
+  browsing suppressions. Postmark's dump endpoint can return very large full
+  exports and is intentionally not exposed as an agent-facing command.
 - Treat message content and recipient/sender data as sensitive. The CLI redacts
   these fields by default.
 - Do not add `--yes` to mutation commands unless the user explicitly asks for
