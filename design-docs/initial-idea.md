@@ -36,7 +36,9 @@ Design principles:
 - Structured output to stdout, structured errors to stderr.
 - Token-efficient list output, likely NDJSON by default.
 - Secret-safe credential profiles stored outside LLM context.
-- Redact message bodies, headers, recipient data, and API tokens by default.
+- Keep delivery triage fields visible, including subject and addressing, while
+  omitting bulky bodies, headers, and attachments from default list output.
+- Redact API tokens, secrets, URL credentials, and raw email blobs by default.
 - Explicit opt-in for mutations such as creating suppressions, retrying inbound messages, or editing webhooks.
 - Classified errors with `fixable_by: agent|human|retry`.
 - Investigation commands that emit evidence records plus concise findings.
@@ -91,7 +93,8 @@ The tool is not a replacement for Postmark's existing CLI. It fills the operatio
 - Delivery investigation over template deployment.
 - Sender/domain/webhook configuration checks over email sending.
 - Compact evidence records instead of raw message dumps.
-- Redaction-first handling of message content and recipient data.
+- Explicit message-content retrieval for single or repeated message IDs, with
+  compact list output for routine triage.
 - Higher-level investigations for common support questions like "why did this email not arrive?"
 
 ## Open Questions
@@ -99,6 +102,7 @@ The tool is not a replacement for Postmark's existing CLI. It fills the operatio
 - Should v1 be strictly read-only?
 - How much should the CLI surface account-token and server-token context
   switching beyond the current profile plus server-alias model?
-- Which message fields should be redacted by default?
+- Which message content fields, if any, should be compacted or redacted beyond
+  list-mode omission and secret redaction?
 - Should template workflows be omitted initially since the existing CLI already handles them?
 - Should the CLI include safe SMTP/API send-test commands, or avoid sending entirely in v1?

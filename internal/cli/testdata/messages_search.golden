@@ -1,1 +1,2 @@
-{"@redacted":["From","HtmlBody","Subject","To"],"LastClick":"2026-05-31T10:04:00Z","LastOpen":"2026-05-31T10:03:00Z","MessageID":"msg-1","MessageStream":"outbound","ReceivedAt":"2026-05-31T10:00:00Z","Status":"Sent"}
+{"Bcc":"bcc@example.com","Cc":"cc@example.com","From":"support@example.com","LastClick":"2026-05-31T10:04:00Z","LastOpen":"2026-05-31T10:03:00Z","MessageID":"msg-1","MessageStream":"outbound","ReceivedAt":"2026-05-31T10:00:00Z","Status":"Sent","Subject":"Welcome","To":"user@example.com"}
+{"From":"support@example.com","MessageID":"msg-2","MessageStream":"outbound","ReceivedAt":"2026-05-31T11:00:00Z","Status":"Sent","Subject":"Follow up","To":"other@example.com"}

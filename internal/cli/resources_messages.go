@@ -2,12 +2,14 @@ package cli
 
 import (
 	"context"
+	"encoding/json"
 	"net/url"
 	"strconv"
 
 	"github.com/spf13/cobra"
 
 	"github.com/shhac/agent-postmark/internal/api"
+	"github.com/shhac/agent-postmark/internal/output"
 )
 
 func registerMessages(root *cobra.Command, globals *GlobalFlags) {
@@ -91,7 +93,8 @@ func registerMessages(root *cobra.Command, globals *GlobalFlags) {
 	cmd.AddCommand(messageActivityCommand("clicks", "List outbound message clicks", globals, "/messages/outbound/clicks", "Clicks"))
 
 	cmd.AddCommand(serverGetCommand("get <message-id>", "Get outbound message details", globals, "/messages/outbound/%s/details"))
-	cmd.AddCommand(serverGetCommand("dump <message-id>", "Get redacted outbound message dump", globals, "/messages/outbound/%s/dump"))
+	cmd.AddCommand(messageContentCommand(globals))
+	cmd.AddCommand(serverGetCommand("dump <message-id>", "Get outbound message dump", globals, "/messages/outbound/%s/dump"))
 	cmd.AddCommand(serverGetCommand("inbound-get <message-id>", "Get inbound message details", globals, "/messages/inbound/%s/details"))
 	cmd.AddCommand(serverPutCommand("inbound-retry <message-id>", "Retry inbound message processing", globals, "/messages/inbound/%s/retry", "Retrying inbound processing can trigger downstream processing again."))
 	cmd.AddCommand(serverPutCommand("inbound-bypass <message-id>", "Bypass inbound message rules", globals, "/messages/inbound/%s/bypass", "Bypassing inbound rules can deliver a message that rules previously blocked."))
@@ -128,4 +131,64 @@ func messageActivityCommand(use, short string, globals *GlobalFlags, basePath, e
 	cmd.Flags().StringVar(&messageID, "message-id", "", "Single message ID")
 	addCountOffsetFlags(cmd, &count, &offset)
 	return cmd
+}
+
+func messageContentCommand(globals *GlobalFlags) *cobra.Command {
+	return &cobra.Command{
+		Use:   "content <message-id> [message-id...]",
+		Short: "Get email content for one or more outbound messages",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return withClient(cmd.Context(), globals, func(ctx context.Context, resolved *resolvedContext) error {
+				rows := make([]json.RawMessage, 0, len(args))
+				for _, id := range args {
+					raw, err := resolved.Client.Get(ctx, api.ServerToken, "/messages/outbound/"+id+"/details", url.Values{})
+					if err != nil {
+						return err
+					}
+					rows = append(rows, raw)
+				}
+				return writeMessageContents(rows, globals.Format)
+			})
+		},
+	}
+}
+
+func writeMessageContents(rows []json.RawMessage, flagFormat string) error {
+	defaultFormat := output.FormatJSON
+	if len(rows) > 1 {
+		defaultFormat = output.FormatNDJSON
+	}
+	format, err := output.ResolveFormat(flagFormat, defaultFormat)
+	if err != nil {
+		output.WriteError(output.Stderr(), err)
+		return nil
+	}
+	if format == output.FormatNDJSON {
+		writer := output.NewNDJSONWriter(output.Stdout())
+		for _, raw := range rows {
+			var item any
+			if err := json.Unmarshal(redactRaw(raw), &item); err != nil {
+				return err
+			}
+			if err := writer.WriteItem(item); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if len(rows) == 1 {
+		output.WriteRawJSON(redactRaw(rows[0]), format, true)
+		return nil
+	}
+	decoded := make([]any, 0, len(rows))
+	for _, raw := range rows {
+		var item any
+		if err := json.Unmarshal(redactRaw(raw), &item); err != nil {
+			return err
+		}
+		decoded = append(decoded, item)
+	}
+	output.Print(map[string]any{"results": decoded, "total": len(rows)}, format, true)
+	return nil
 }

@@ -12,8 +12,11 @@ error hints, and no access to Postmark account or server tokens.
 - `profiles` primary command with hidden `auth` alias for sibling CLI familiarity.
 - LLM-shaped output: lists default to NDJSON, single resources default to JSON.
 - Structured errors: stderr JSON includes `fixable_by: agent|human|retry`.
-- Redaction: message bodies, headers, attachments, recipients, sender addresses,
-  tokens, and secrets are redacted by default.
+- Delivery metadata is visible by default: subject and addressing fields are
+  available for triage, while list output omits bulky bodies, headers, and
+  attachments.
+- Redaction: tokens, secrets, URL credentials, and original raw email blobs are
+  redacted by default.
 - Mock server: `mockpostmark` provides deterministic e2e fixtures.
 - Agent onboarding: ships with `skills/agent-postmark/SKILL.md`.
 
@@ -73,6 +76,7 @@ agent-postmark profiles servers remove prod old-server
 
 ```bash
 agent-postmark messages inbound-search --from reply@example.com
+agent-postmark messages content <message-id> [message-id...]
 agent-postmark messages dump <message-id>
 agent-postmark messages opens --count 20
 agent-postmark messages opens --message-id <message-id>

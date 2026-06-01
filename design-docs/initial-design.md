@@ -64,7 +64,7 @@ agent-postmark
 ├── domains           list, get, verify-dkim, verify-spf
 ├── signatures        list, get
 ├── webhooks          list, get
-├── messages          search, inbound-search, opens, clicks, get, dump, inbound-get, inbound-retry, inbound-bypass
+├── messages          search, inbound-search, opens, clicks, get, content, dump, inbound-get, inbound-retry, inbound-bypass
 ├── bounces           list, get, dump, activate
 ├── suppressions      list, check, create, delete
 ├── stats             delivery
@@ -119,8 +119,11 @@ Postmark-native env aliases, then built-in defaults.
 - `--account-token` and `--server-token` are direct-use escape hatches for local
   tests and automation; they are never persisted or printed.
 - Profile config and `credentials.json` contain only non-secret metadata.
-- Message bodies, recipients, sender addresses, headers, attachments, metadata,
-  tokens, and secrets are redacted by default.
+- Delivery triage fields are visible by default, including subjects and
+  addressing. List output omits bulky bodies, headers, and attachments unless
+  `--full` is requested. Single-message commands can show message content.
+- Tokens, secrets, URL credentials, and Postmark `OriginalEmail` raw email blobs
+  are redacted by default.
 - Mutating commands require explicit `--yes` and return a human-fixable JSON
   error without it. This includes domain verification, suppression
   create/delete, bounce activation, and inbound retry/bypass. Webhook edits,
@@ -170,7 +173,7 @@ are suggestions for the LLM to consider, not implicit permission to mutate state
 
 `investigate delivery --email <address>` is the first high-level workflow. It
 queries outbound messages and bounces for the active message stream, emits
-compact redacted evidence records, and classifies likely outcomes such as no
+compact evidence records with secrets redacted, and classifies likely outcomes such as no
 matching activity, sent activity, bounce activity, or inactive recipient state.
 
 Implemented investigation commands:

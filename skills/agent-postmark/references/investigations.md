@@ -15,7 +15,7 @@ than asking for a specific Postmark object.
 
 ## Record Semantics
 
-- `entity`: compact redacted evidence from Postmark.
+- `entity`: compact evidence from Postmark, with secrets redacted.
 - `finding`: CLI interpretation. Severities are `ok`, `info`, `warning`, and
   `critical`.
 - `next_command`: suggested follow-up; it is not permission to mutate state.

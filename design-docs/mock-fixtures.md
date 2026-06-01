@@ -30,9 +30,10 @@ AGENT_POSTMARK_RUN_SUBPROCESS_E2E=1 go test ./internal/cli -run SubprocessE2E -c
 - Sender signature `601`, `support@example.com`, confirmed.
 - Webhook `701`, delivery and bounce enabled.
 - Outbound message `msg-1` to `user@example.com`.
+- Outbound message `msg-2` for repeated content retrieval tests.
 - Inbound message `in-1`.
 - Bounce `9001`, hard bounce for `user@example.com`, inactive and activatable.
-- Redacted dump fixtures for `msg-1` and `9001`.
+- Dump fixtures for `msg-1` and `9001`.
 - Open and click records for `msg-1`.
 - Suppression for `user@example.com` on the `outbound` stream.
 
@@ -41,8 +42,9 @@ AGENT_POSTMARK_RUN_SUBPROCESS_E2E=1 go test ./internal/cli -run SubprocessE2E -c
 - Missing or invalid token returns Postmark-shaped `401` with `ErrorCode: 10`.
 - Unknown route returns Postmark-shaped `404` with `ErrorCode: 12`.
 - List routes use `TotalCount` plus the documented list field.
-- Fixture message/bounce payloads include sensitive fields so e2e tests can
-  prove redaction is working.
+- Fixture message/bounce payloads include message content, addressing, and
+  secret-shaped fields so e2e tests can prove compacting and redaction are
+  applied in the right places.
 - Guarded mutation fixtures return deterministic receipts after the CLI has
   enforced `--yes`.
 - Golden fixtures in `internal/cli/testdata` pin important NDJSON contracts.

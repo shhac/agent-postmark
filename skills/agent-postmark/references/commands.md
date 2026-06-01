@@ -42,6 +42,7 @@ agent-postmark --server <server-alias> streams get <stream-id>
 agent-postmark messages search --to user@example.com --stream outbound
 agent-postmark messages inbound-search --from reply@example.com
 agent-postmark messages get <message-id>
+agent-postmark messages content <message-id> [message-id...]
 agent-postmark messages dump <message-id>
 agent-postmark messages inbound-get <message-id>
 agent-postmark messages opens --count 20

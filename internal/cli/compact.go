@@ -24,11 +24,11 @@ func compactListItem(resource string, raw json.RawMessage, full bool) json.RawMe
 	case "Webhooks":
 		keys = []string{"ID", "Url", "MessageStream", "Triggers"}
 	case "Messages":
-		keys = []string{"MessageID", "Status", "MessageStream", "Tag", "ReceivedAt", "LastOpen", "LastClick"}
+		keys = []string{"MessageID", "Status", "MessageStream", "Tag", "Subject", "From", "To", "Cc", "Bcc", "ReplyTo", "ReceivedAt", "LastOpen", "LastClick"}
 	case "InboundMessages":
-		keys = []string{"MessageID", "Status", "FromName", "MailboxHash", "Date"}
+		keys = []string{"MessageID", "Status", "From", "FromName", "To", "Cc", "Bcc", "ReplyTo", "Subject", "MailboxHash", "Date"}
 	case "Bounces":
-		keys = []string{"ID", "Type", "Name", "MessageID", "Inactive", "CanActivate", "MessageStream", "BouncedAt", "DumpAvailable"}
+		keys = []string{"ID", "Type", "Name", "Email", "From", "Subject", "MessageID", "Inactive", "CanActivate", "MessageStream", "BouncedAt", "DumpAvailable"}
 	case "Opens":
 		keys = []string{"MessageID", "ReceivedAt", "FirstOpen", "LastOpen", "TotalOpens", "UniqueOpens", "OS", "Platform"}
 	case "Clicks":

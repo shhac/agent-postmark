@@ -57,14 +57,28 @@ func TestRedactStillRedactsTokenContainers(t *testing.T) {
 	}
 }
 
-func TestRedactStillRedactsSensitiveContainers(t *testing.T) {
-	raw := redactRaw([]byte(`{"Headers":[{"Name":"X-Secret","Value":"secret"}],"Metadata":{"token":"secret"},"Attachments":[{"Name":"invoice.pdf"}]}`))
+func TestRedactAllowsEmailContentContainers(t *testing.T) {
+	raw := redactRaw([]byte(`{"HtmlBody":"<p>Hello</p>","TextBody":"Hello","Subject":"Welcome","From":"sender@example.com","To":"user@example.com","Cc":"cc@example.com","Bcc":"bcc@example.com","Headers":[{"Name":"X-Campaign","Value":"spring"}],"Metadata":{"campaign":"spring"},"Attachments":[{"Name":"invoice.pdf","Content":"base64-body"}]}`))
 	got := string(raw)
-	if strings.Contains(got, "secret") || strings.Contains(got, "invoice.pdf") {
-		t.Fatalf("sensitive container leaked: %s", got)
+	if strings.Contains(got, "[REDACTED]") || strings.Contains(got, "@redacted") {
+		t.Fatalf("email content containers should not be redacted by default: %s", got)
 	}
-	if !strings.Contains(got, `"Headers":"[REDACTED]"`) || !strings.Contains(got, `"Metadata":"[REDACTED]"`) || !strings.Contains(got, `"Attachments":"[REDACTED]"`) {
-		t.Fatalf("sensitive containers were not redacted: %s", got)
+	if !strings.Contains(got, `"HtmlBody":"<p>Hello</p>"`) || !strings.Contains(got, `"Subject":"Welcome"`) || !strings.Contains(got, `"To":"user@example.com"`) || !strings.Contains(got, `"Headers":[`) || !strings.Contains(got, `"Attachments":[`) || !strings.Contains(got, `"Metadata":{`) {
+		t.Fatalf("email content containers changed: %s", got)
+	}
+}
+
+func TestRedactStillRedactsNestedSecretsInsideContent(t *testing.T) {
+	raw := redactRaw([]byte(`{"Metadata":{"campaign":"spring","api_token":"secret"},"Attachments":[{"Name":"invoice.pdf","secret":"attachment-secret"}]}`))
+	got := string(raw)
+	if strings.Contains(got, "attachment-secret") || strings.Contains(got, `"api_token":"secret"`) {
+		t.Fatalf("nested secret leaked: %s", got)
+	}
+	if !strings.Contains(got, `"api_token":"[REDACTED]"`) || !strings.Contains(got, `"secret":"[REDACTED]"`) {
+		t.Fatalf("nested secret was not redacted: %s", got)
+	}
+	if !strings.Contains(got, `"campaign":"spring"`) || !strings.Contains(got, `"Name":"invoice.pdf"`) {
+		t.Fatalf("safe content metadata changed: %s", got)
 	}
 }
 
@@ -100,12 +114,12 @@ func TestRedactKeySensitivityWinsOverURLUserinfo(t *testing.T) {
 }
 
 func TestRedactDeduplicatesArrayPaths(t *testing.T) {
-	raw := redactRaw([]byte(`{"Suppressions":[{"EmailAddress":"a@example.com"},{"EmailAddress":"b@example.com"}]}`))
+	raw := redactRaw([]byte(`{"Items":[{"ApiToken":"a"},{"ApiToken":"b"}]}`))
 	got := string(raw)
-	if strings.Contains(got, "a@example.com") || strings.Contains(got, "b@example.com") {
-		t.Fatalf("email leaked: %s", got)
+	if strings.Contains(got, `"a"`) || strings.Contains(got, `"b"`) {
+		t.Fatalf("token leaked: %s", got)
 	}
-	if strings.Count(got, "Suppressions.EmailAddress") != 1 {
+	if strings.Count(got, "Items.ApiToken") != 1 {
 		t.Fatalf("redacted paths should be deduplicated: %s", got)
 	}
 }

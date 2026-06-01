@@ -26,7 +26,7 @@ func TestWriteEnvelopeListWithPageAppliesLocalPaginationWithoutTotalCount(t *tes
 	if strings.Contains(got, "a@example.com") || strings.Contains(got, "c@example.com") {
 		t.Fatalf("local pagination leaked items outside requested page: %s", got)
 	}
-	if !strings.Contains(got, `"EmailAddress":"[REDACTED]"`) || !strings.Contains(got, `"total_items":3`) || !strings.Contains(got, `"next_offset":2`) {
+	if !strings.Contains(got, `"EmailAddress":"b@example.com"`) || !strings.Contains(got, `"total_items":3`) || !strings.Contains(got, `"next_offset":2`) {
 		t.Fatalf("unexpected output: %s", got)
 	}
 }

@@ -45,14 +45,15 @@ Sources:
 | `messages opens --message-id <id>` | `GET /messages/outbound/opens/{id}` | NDJSON rows from `Opens`. |
 | `messages clicks` | `GET /messages/outbound/clicks` | NDJSON rows from `Clicks`. |
 | `messages clicks --message-id <id>` | `GET /messages/outbound/clicks/{id}` | NDJSON rows from `Clicks`. |
-| `messages get <id>` | `GET /messages/outbound/{id}/details` | Redacted JSON. |
-| `messages dump <id>` | `GET /messages/outbound/{id}/dump` | Redacted JSON; body redacted by default. |
-| `messages inbound-get <id>` | `GET /messages/inbound/{id}/details` | Redacted JSON. |
+| `messages get <id>` | `GET /messages/outbound/{id}/details` | JSON with secrets redacted. |
+| `messages content <id> [id...]` | `GET /messages/outbound/{id}/details` | One ID defaults to JSON; multiple IDs default to NDJSON. Bodies, headers, attachments, subject, and addressing are visible; secrets are still redacted. |
+| `messages dump <id>` | `GET /messages/outbound/{id}/dump` | JSON with secrets redacted. |
+| `messages inbound-get <id>` | `GET /messages/inbound/{id}/details` | JSON with secrets redacted. |
 | `messages inbound-retry <id> --yes` | `PUT /messages/inbound/{id}/retry` | Guarded mutation. |
 | `messages inbound-bypass <id> --yes` | `PUT /messages/inbound/{id}/bypass` | Guarded mutation. |
 | `bounces list` | `GET /bounces` | NDJSON rows from `Bounces`. |
-| `bounces get <id>` | `GET /bounces/{id}` | Redacted JSON. |
-| `bounces dump <id>` | `GET /bounces/{id}/dump` | Redacted JSON; body redacted by default. |
+| `bounces get <id>` | `GET /bounces/{id}` | JSON with secrets redacted. |
+| `bounces dump <id>` | `GET /bounces/{id}/dump` | JSON with secrets redacted. |
 | `bounces activate <id> --yes` | `PUT /bounces/{id}/activate` | Guarded mutation. |
 | `suppressions list` | `GET /message-streams/{stream}/suppressions/list` | NDJSON rows from `Suppressions`; Postmark returns `TotalCount` and honors `count`/`offset`. |
 | `suppressions check <email>` | `GET /message-streams/{stream}/suppressions/list?EmailAddress=...` | NDJSON rows from `Suppressions`. |
@@ -81,15 +82,19 @@ Postmark list endpoints generally use `count` and `offset`, often with a
 docs. Message and bounce dates are currently passed through as Postmark expects:
 `fromdate` and `todate`, with Postmark's documented timestamp shape.
 
-## Redaction defaults
+## Redaction and compacting defaults
 
-The CLI redacts fields likely to contain personal data or message content:
+The CLI separates compacting from redaction:
 
-- recipient and sender fields such as `To`, `Cc`, `Bcc`, `From`, `Email`,
-  `EmailAddress`, and `Recipients`
-- message content such as `HtmlBody`, `TextBody`, `Body`, `Content`, `Subject`,
-  `Headers`, `Attachments`, and `Metadata`
-- anything with `token` or `secret` in the field name
+- list commands default to compact rows and omit bulky fields such as bodies,
+  headers, and attachments unless `--full` is requested
+- delivery triage fields such as `Subject`, `From`, `To`, `Cc`, `Bcc`,
+  `ReplyTo`, `Email`, and `EmailAddress` are visible by default
+- single-resource commands can show bodies, headers, attachments, and metadata
+- `messages content <id> [id...]` is the explicit command for retrieving full
+  outbound email content from one or more message IDs
+- fields named like tokens or secrets, URL credentials, and Postmark
+  `OriginalEmail` raw email blobs are redacted by default
 
 The top-level resource includes `@redacted` when possible, so an LLM knows why a
 field is unavailable rather than hallucinating from absent data.

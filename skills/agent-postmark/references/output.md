@@ -29,8 +29,15 @@ Severities:
 
 ## Redaction
 
-The CLI redacts message body, subject, recipient/sender fields, headers,
-attachments, metadata, and any key containing token or secret.
+The CLI separates compacting from redaction:
+
+- list/search output omits bulky bodies, headers, and attachments by default
+- subjects and addressing fields are visible for delivery triage
+- single-resource output can include bodies, headers, attachments, and metadata
+- `messages content <message-id> [message-id...]` explicitly retrieves outbound
+  email content from one or more message IDs
+- keys containing token or secret, URL credentials, and Postmark `OriginalEmail`
+  raw email blobs are redacted
 
 When possible, redacted resources include `@redacted` paths. Do not infer the
 redacted content.

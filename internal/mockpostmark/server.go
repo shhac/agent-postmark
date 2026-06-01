@@ -91,6 +91,7 @@ func mockRoutes() []route {
 		listRoute(http.MethodGet, "/messages/outbound/clicks", "Clicks", staticList(clicks)),
 		listRoute(http.MethodGet, "/messages/outbound/clicks/msg-1", "Clicks", staticList(clicks), display("GET  /messages/outbound/clicks/{id}")),
 		itemRoute(http.MethodGet, "/messages/outbound/msg-1/details", "GET  /messages/outbound/{id}/details", func() any { return messages()[0] }),
+		itemRoute(http.MethodGet, "/messages/outbound/msg-2/details", "GET  /messages/outbound/{id}/details", func() any { return messages()[1] }),
 		itemRoute(http.MethodGet, "/messages/outbound/msg-1/dump", "GET  /messages/outbound/{id}/dump", func() any {
 			return map[string]any{"Body": "raw outbound message with recipient user@example.com"}
 		}),
@@ -202,7 +203,8 @@ func webhooks() []any {
 
 func messages() []any {
 	return []any{
-		map[string]any{"MessageID": "msg-1", "To": "user@example.com", "From": "support@example.com", "Subject": "Welcome", "Status": "Sent", "MessageStream": "outbound", "ReceivedAt": "2026-05-31T10:00:00Z", "HtmlBody": "<p>secret body</p>", "LastOpen": "2026-05-31T10:03:00Z", "LastClick": "2026-05-31T10:04:00Z"},
+		map[string]any{"MessageID": "msg-1", "To": "user@example.com", "Cc": "cc@example.com", "Bcc": "bcc@example.com", "From": "support@example.com", "Subject": "Welcome", "Status": "Sent", "MessageStream": "outbound", "ReceivedAt": "2026-05-31T10:00:00Z", "HtmlBody": "<p>secret body</p>", "TextBody": "secret text body", "Headers": []any{map[string]any{"Name": "X-Campaign", "Value": "campaign-1"}}, "Attachments": []any{map[string]any{"Name": "receipt.pdf"}}, "LastOpen": "2026-05-31T10:03:00Z", "LastClick": "2026-05-31T10:04:00Z"},
+		map[string]any{"MessageID": "msg-2", "To": "other@example.com", "From": "support@example.com", "Subject": "Follow up", "Status": "Sent", "MessageStream": "outbound", "ReceivedAt": "2026-05-31T11:00:00Z", "HtmlBody": "<p>second body</p>"},
 	}
 }
 

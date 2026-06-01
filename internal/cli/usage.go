@@ -36,6 +36,7 @@ func registerUsage(root *cobra.Command) {
 				},
 				"server_token_workflows": []string{
 					"agent-postmark messages inbound-search --from reply@example.com",
+					"agent-postmark messages content <message-id> [message-id...]",
 					"agent-postmark messages dump <message-id>",
 					"agent-postmark messages opens --count 20",
 					"agent-postmark messages opens --message-id <message-id>",
@@ -55,7 +56,9 @@ func registerUsage(root *cobra.Command) {
 				"safety": []string{
 					"Secrets are stored in Keychain and never printed.",
 					"Lists default to NDJSON; single resources default to JSON.",
-					"Message bodies, recipients, headers, attachments, tokens, and secrets are redacted by default.",
+					"List output omits bulky bodies, headers, and attachments by default.",
+					"Message subject and addressing fields are visible for delivery triage.",
+					"Tokens, secrets, URL credentials, and original raw email blobs are redacted by default.",
 				},
 			}, "")
 		},

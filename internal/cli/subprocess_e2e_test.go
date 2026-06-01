@@ -41,8 +41,12 @@ func TestSubprocessE2EAgainstMockpostmark(t *testing.T) {
 	waitForHealth(t, "http://"+addr+"/healthz")
 
 	out := runAgent(t, repoRoot, agentBin, addr, "messages", "search", "--to", "user@example.com")
-	if !strings.Contains(out, `"MessageID":"msg-1"`) || strings.Contains(out, "user@example.com") {
+	if !strings.Contains(out, `"MessageID":"msg-1"`) || !strings.Contains(out, `"Subject":"Welcome"`) || !strings.Contains(out, `"To":"user@example.com"`) || strings.Contains(out, "secret body") {
 		t.Fatalf("unexpected message search output: %s", out)
+	}
+	out = runAgent(t, repoRoot, agentBin, addr, "messages", "content", "msg-1")
+	if !strings.Contains(out, `"HtmlBody": "<p>secret body</p>"`) || !strings.Contains(out, `"Attachments": [`) {
+		t.Fatalf("unexpected message content output: %s", out)
 	}
 	out = runAgent(t, repoRoot, agentBin, addr, "investigate", "delivery", "--email", "user@example.com")
 	if !strings.Contains(out, `"severity":"critical"`) {

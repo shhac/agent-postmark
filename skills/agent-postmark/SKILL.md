@@ -38,8 +38,9 @@ webhooks.
 - Use `agent-postmark suppressions list`, not a raw suppression dump, when
   browsing suppressions. Postmark's dump endpoint can return very large full
   exports and is intentionally not exposed as an agent-facing command.
-- Treat message content and recipient/sender data as sensitive. The CLI redacts
-  these fields by default.
+- Subjects and addressing fields are visible for triage. Use list/search output
+  first; ask for `messages content` only when the user needs actual body,
+  header, or attachment details.
 - Do not add `--yes` to mutation commands unless the user explicitly asks for
   that state change.
 
@@ -70,9 +71,12 @@ For local testing, run `mockpostmark` and set `AGENT_POSTMARK_BASE_URL`.
 Lists and investigations default to NDJSON. Single resources default to JSON.
 Errors are JSON on stderr with `error`, `fixable_by`, and usually `hint`.
 
-Sensitive fields are redacted with `"[REDACTED]"` and top-level `@redacted`
-paths when possible. Do not infer redacted message body, subject, recipient, or
-sender details unless the user provides them out of band.
+Subjects and addressing fields are visible for delivery triage. List output
+omits bulky bodies, headers, and attachments by default; use
+`agent-postmark messages content <message-id> [message-id...]` when the user
+needs the actual email content. Tokens, secrets, URL credentials, and original
+raw email blobs are redacted with `"[REDACTED]"` and top-level `@redacted`
+paths when possible.
 
 Investigations emit evidence records:
 

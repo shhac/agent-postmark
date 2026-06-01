@@ -55,7 +55,7 @@ func registerBounces(root *cobra.Command, globals *GlobalFlags) {
 	addCountOffsetFlags(list, &count, &offset)
 	cmd.AddCommand(list)
 	cmd.AddCommand(serverGetCommand("get <bounce-id>", "Get a bounce", globals, "/bounces/%s"))
-	cmd.AddCommand(serverGetCommand("dump <bounce-id>", "Get redacted bounce dump", globals, "/bounces/%s/dump"))
+	cmd.AddCommand(serverGetCommand("dump <bounce-id>", "Get bounce dump", globals, "/bounces/%s/dump"))
 	cmd.AddCommand(serverPutCommand("activate <bounce-id>", "Reactivate a bounced recipient", globals, "/bounces/%s/activate", "Activating a bounce can allow future delivery to this recipient."))
 	root.AddCommand(cmd)
 }

@@ -10,9 +10,12 @@ or `output.md`.
 agent-postmark investigate delivery --email user@example.com
 agent-postmark messages search --to user@example.com --stream outbound
 agent-postmark messages get <message-id>
+agent-postmark messages content <message-id>
 ```
 
-Look for `Status`, `ReceivedAt`, message stream, and any bounce findings.
+Look for `Status`, `ReceivedAt`, message stream, subject, addressing, and any
+bounce findings. Use `messages content` only when the user needs body, header,
+or attachment details for a specific send.
 
 ## Did it bounce?
 

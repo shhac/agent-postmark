@@ -286,16 +286,16 @@ func TestListPaginationRejectsNegativeValuesWithHints(t *testing.T) {
 	}
 }
 
-func TestMessagesSearchCompactsAndRedacts(t *testing.T) {
+func TestMessagesSearchCompactsBulkyContent(t *testing.T) {
 	stdout, stderr, _ := runCLI(t, "messages", "search", "--to", "user@example.com")
 	if stderr != "" {
 		t.Fatalf("stderr = %s", stderr)
 	}
-	if !strings.Contains(stdout, `"MessageID":"msg-1"`) || !strings.Contains(stdout, `"Status":"Sent"`) {
+	if !strings.Contains(stdout, `"MessageID":"msg-1"`) || !strings.Contains(stdout, `"Status":"Sent"`) || !strings.Contains(stdout, `"Subject":"Welcome"`) || !strings.Contains(stdout, `"To":"user@example.com"`) {
 		t.Fatalf("stdout = %s", stdout)
 	}
-	if strings.Contains(stdout, "user@example.com") || strings.Contains(stdout, "secret body") || strings.Contains(stdout, "Welcome") {
-		t.Fatalf("sensitive content leaked: %s", stdout)
+	if strings.Contains(stdout, "secret body") || strings.Contains(stdout, "X-Campaign") || strings.Contains(stdout, "receipt.pdf") {
+		t.Fatalf("bulky content leaked into list output: %s", stdout)
 	}
 }
 
@@ -304,7 +304,7 @@ func TestSuppressionsListUsesPaginatedListEndpoint(t *testing.T) {
 	if stderr != "" {
 		t.Fatalf("stderr = %s", stderr)
 	}
-	if !strings.Contains(stdout, `"EmailAddress":"[REDACTED]"`) || strings.Contains(stdout, "user@example.com") {
+	if !strings.Contains(stdout, `"EmailAddress":"user@example.com"`) {
 		t.Fatalf("stdout = %s", stdout)
 	}
 	if len(doer.paths) != 1 || doer.paths[0] != "/message-streams/outbound/suppressions/list" {
@@ -347,8 +347,8 @@ func TestInvestigateDeliveryEmitsCriticalBounceFinding(t *testing.T) {
 	if !strings.Contains(stdout, `"severity":"critical"`) || !strings.Contains(stdout, "Recipient appears inactive") {
 		t.Fatalf("stdout = %s", stdout)
 	}
-	if strings.Contains(stdout, "user@example.com") || strings.Contains(stdout, "secret body") {
-		t.Fatalf("sensitive content leaked: %s", stdout)
+	if strings.Contains(stdout, "secret body") {
+		t.Fatalf("bulky content leaked into investigation output: %s", stdout)
 	}
 }
 
@@ -382,9 +382,6 @@ func TestInvestigateBounce(t *testing.T) {
 	}
 	if !strings.Contains(stdout, `"object":"bounce"`) || !strings.Contains(stdout, `"severity":"critical"`) {
 		t.Fatalf("stdout = %s", stdout)
-	}
-	if strings.Contains(stdout, "user@example.com") {
-		t.Fatalf("sensitive content leaked: %s", stdout)
 	}
 }
 
@@ -421,20 +418,46 @@ func TestInvestigateWebhookHealth(t *testing.T) {
 	}
 }
 
-func TestMessageAndBounceDumpsRedactBodies(t *testing.T) {
+func TestMessageAndBounceDumpsShowBodies(t *testing.T) {
 	stdout, stderr, _ := runCLI(t, "messages", "dump", "msg-1")
 	if stderr != "" {
 		t.Fatalf("stderr = %s", stderr)
 	}
-	if !strings.Contains(stdout, `"Body": "[REDACTED]"`) || strings.Contains(stdout, "user@example.com") {
+	if !strings.Contains(stdout, "raw outbound message with recipient user@example.com") {
 		t.Fatalf("stdout = %s", stdout)
 	}
 	stdout, stderr, _ = runCLI(t, "bounces", "dump", "9001")
 	if stderr != "" {
 		t.Fatalf("stderr = %s", stderr)
 	}
-	if !strings.Contains(stdout, `"Body": "[REDACTED]"`) || strings.Contains(stdout, "user@example.com") {
+	if !strings.Contains(stdout, "smtp bounce dump with recipient user@example.com") {
 		t.Fatalf("stdout = %s", stdout)
+	}
+}
+
+func TestMessageContentShowsBodiesForRepeatedIDs(t *testing.T) {
+	stdout, stderr, doer := runCLI(t, "messages", "content", "msg-1", "msg-2")
+	if stderr != "" {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if !strings.Contains(stdout, `"HtmlBody":"<p>secret body</p>"`) || !strings.Contains(stdout, `"TextBody":"secret text body"`) || !strings.Contains(stdout, `"Headers":[`) || !strings.Contains(stdout, `"Attachments":[`) || !strings.Contains(stdout, `"HtmlBody":"<p>second body</p>"`) {
+		t.Fatalf("stdout = %s", stdout)
+	}
+	if len(doer.paths) != 2 || doer.paths[0] != "/messages/outbound/msg-1/details" || doer.paths[1] != "/messages/outbound/msg-2/details" {
+		t.Fatalf("paths = %#v", doer.paths)
+	}
+}
+
+func TestMessageContentSingleDefaultsToJSON(t *testing.T) {
+	stdout, stderr, doer := runCLI(t, "messages", "content", "msg-1")
+	if stderr != "" {
+		t.Fatalf("stderr = %s", stderr)
+	}
+	if !strings.HasPrefix(stdout, "{\n") || !strings.Contains(stdout, `"HtmlBody": "<p>secret body</p>"`) || !strings.Contains(stdout, `"Attachments": [`) {
+		t.Fatalf("stdout = %s", stdout)
+	}
+	if len(doer.paths) != 1 || doer.paths[0] != "/messages/outbound/msg-1/details" {
+		t.Fatalf("paths = %#v", doer.paths)
 	}
 }
 

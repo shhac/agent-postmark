@@ -14,8 +14,9 @@ Postmark delivery triage CLI for AI agents.
 - Prefer read-only commands. Any command that can change Postmark state must
   require `--yes` and return a human-fixable JSON error without it.
 - Lists default to NDJSON; single resources default to JSON.
-- Redact message bodies, headers, attachments, recipient data, sender addresses,
-  tokens, and secrets by default.
+- Keep delivery metadata visible: subject and addressing fields are available
+  for triage. List output should omit bulky bodies, headers, and attachments.
+- Redact tokens, secrets, URL credentials, and original raw email blobs by default.
 - Keep HTTP logic dependency-injected so tests do not need real network access.
 - Use `mockpostmark` fixtures for CLI contract tests.
 

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/url"
 	"sort"
@@ -8,25 +9,8 @@ import (
 )
 
 var sensitiveKeys = map[string]bool{
-	"HtmlBody":         true,
-	"TextBody":         true,
-	"Body":             true,
-	"Content":          true,
-	"Headers":          true,
-	"Attachments":      true,
-	"Metadata":         true,
 	"Message":          false,
-	"Subject":          true,
-	"Email":            true,
-	"From":             true,
-	"To":               true,
-	"Cc":               true,
-	"Bcc":              true,
-	"ReplyTo":          true,
 	"OriginalEmail":    true,
-	"Recipient":        true,
-	"Recipients":       true,
-	"EmailAddress":     true,
 	"ReturnPathDomain": false,
 }
 
@@ -49,11 +33,21 @@ func redactRaw(raw json.RawMessage) json.RawMessage {
 			m["@redacted"] = paths
 		}
 	}
-	out, err := json.Marshal(redacted)
+	out, err := marshalJSONNoEscape(redacted)
 	if err != nil {
 		return raw
 	}
 	return out
+}
+
+func marshalJSONNoEscape(v any) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
+		return nil, err
+	}
+	return bytes.TrimSuffix(buf.Bytes(), []byte("\n")), nil
 }
 
 func redactValue(v any, path string) (any, []string) {
