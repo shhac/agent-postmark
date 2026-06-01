@@ -24,9 +24,13 @@ webhooks.
   `agent-postmark profiles add <profile> --form --account-token` and/or
   `agent-postmark profiles servers add <profile> <server> --form --server-token --server-id <id>`
   locally so tokens go directly into OS dialogs.
+- For initial setup with multiple server tokens, use
+  `agent-postmark profiles setup <profile> --form --account-token --server app:<id>:outbound --server billing:<id>:outbound`.
 - Use `agent-postmark profiles update <profile> --form --account-token` or
   `agent-postmark profiles servers update <profile> <server> --form --server-token`
   when a stored token needs replacement.
+- Use `agent-postmark profiles servers remove <profile> <server>` to remove a
+  server context and its stored token.
 - Prefer read-only commands.
 - Remember token scope: account-token commands handle servers, domains, streams,
   and signatures; server-token commands handle messages, bounces, stats,

@@ -14,8 +14,9 @@ Command registration is intentionally split by user-facing domain:
 - `auth.go`, `auth_add.go`, `auth_update.go`, `auth_servers.go`,
   `auth_errors.go`: profile management and secret-safe setup. Account tokens
   attach to profiles; server tokens attach to server aliases within profiles.
-  Tokens are collected via `--form` or direct local-only flags, then stored
-  through `internal/credential`.
+  `profiles setup` can create a profile and multiple server contexts in one
+  form-guided flow. Tokens are collected via `--form` or direct local-only
+  flags, then stored through `internal/credential`.
 - `resources.go`, `resources_messages.go`, `resources_recipients.go`,
   `resources_helpers.go`: resource commands, shared read/mutation command
   factories, list output adapters, and guarded `--yes` mutation handling.

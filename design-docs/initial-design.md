@@ -46,10 +46,12 @@ The primary command is therefore `profiles`, with `auth` as a hidden
 compatibility alias for sibling CLI familiarity:
 
 ```bash
+agent-postmark profiles setup prod --form --account-token --server app:123:outbound --server billing:456:outbound
 agent-postmark profiles add prod --form --account-token
 agent-postmark profiles servers add prod app --form --server-token --server-id 123 --stream outbound --default
 agent-postmark profiles check prod
 agent-postmark profiles servers update prod app --server-id 456 --stream broadcasts --default
+agent-postmark profiles servers remove prod old-server
 agent-postmark profiles list
 ```
 

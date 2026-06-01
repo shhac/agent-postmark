@@ -21,6 +21,9 @@ error hints, and no access to Postmark account or server tokens.
 
 ```bash
 make build
+./agent-postmark profiles setup prod --form --account-token \
+  --server app:123:outbound \
+  --server billing:456:outbound
 ./agent-postmark profiles add prod --form --account-token
 ./agent-postmark profiles servers add prod app --form --server-token --server-id 123 --stream outbound --default
 ./agent-postmark profiles check prod
@@ -52,6 +55,19 @@ domains, and sender signatures. Server tokens are used for delivery activity
 inside one server, including messages, bounces, delivery stats, and webhooks.
 They are independent: a profile can have only an account token, only server
 tokens, or both.
+
+Rotate tokens without changing profile metadata:
+
+```bash
+agent-postmark profiles update prod --form --account-token
+agent-postmark profiles servers update prod app --form --server-token
+```
+
+Remove a server context and its stored token:
+
+```bash
+agent-postmark profiles servers remove prod old-server
+```
 
 ## Operational Commands
 

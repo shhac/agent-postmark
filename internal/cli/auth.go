@@ -17,6 +17,7 @@ var promptSecret = dialog.PromptSecret
 func registerAuth(root *cobra.Command, globals *GlobalFlags) {
 	auth := &cobra.Command{Use: "profiles", Short: "Manage Postmark credential profiles"}
 	registerAuthAdd(auth)
+	registerAuthSetup(auth)
 	registerAuthUpdate(auth)
 	registerAuthServers(auth)
 	registerAuthCheck(auth, globals)

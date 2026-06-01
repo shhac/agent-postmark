@@ -6,11 +6,15 @@ support workflows, check `scenarios.md` or `investigations.md` first.
 ## Profiles
 
 ```bash
+agent-postmark profiles setup prod --form --account-token --server app:123:outbound --server billing:456:outbound
 agent-postmark profiles add prod --form --account-token
 agent-postmark profiles servers add prod app --form --server-token --server-id 123 --stream outbound --default
 agent-postmark profiles check prod
 agent-postmark profiles servers update prod app --server-id 456 --stream broadcasts --default
+agent-postmark profiles update prod --form --account-token
+agent-postmark profiles servers update prod app --form --server-token
 agent-postmark profiles servers list prod
+agent-postmark profiles servers remove prod app
 agent-postmark profiles list
 agent-postmark auth list
 ```
