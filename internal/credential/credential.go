@@ -2,6 +2,7 @@ package credential
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -102,10 +103,8 @@ func GetAccount(profile string) (string, error) {
 	if !ok || !current.AccountToken {
 		return "", &NotFoundError{Name: profile, Kind: AccountToken}
 	}
-	if token, err := keychainGet(accountKeychainName(profile)); err == nil {
-		return token, nil
-	}
-	return keychainGet(legacyKeychainName(profile, AccountToken))
+	// KEYCHAIN-MIGRATION: Prefer the new service and require explicit migration for legacy-service tokens.
+	return getAccountWithMigration(profile, true)
 }
 
 func GetServer(profile, server string) (string, error) {
@@ -119,13 +118,15 @@ func GetServer(profile, server string) (string, error) {
 	if !hasServer && !hasLegacyDefault {
 		return "", &NotFoundError{Name: profile + "/server/" + server, Kind: ServerToken}
 	}
-	if token, err := keychainGet(serverKeychainName(profile, server)); err == nil {
-		return token, nil
+	// KEYCHAIN-MIGRATION: Prefer the new service and require explicit migration for legacy-service tokens.
+	token, err := getServerWithMigration(profile, server, true)
+	if err != nil && server != "default" {
+		var migrationErr *MigrationRequiredError
+		if !errors.As(err, &migrationErr) {
+			return "", &NotFoundError{Name: profile + "/server/" + server, Kind: ServerToken}
+		}
 	}
-	if server == "default" {
-		return keychainGet(legacyKeychainName(profile, ServerToken))
-	}
-	return "", &NotFoundError{Name: profile + "/server/" + server, Kind: ServerToken}
+	return token, err
 }
 
 func Remove(name string) error {

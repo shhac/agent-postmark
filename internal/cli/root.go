@@ -23,10 +23,12 @@ type GlobalFlags struct {
 	MaxRetries    int
 	Debug         bool
 	Full          bool
+	// KEYCHAIN-MIGRATION: Hidden temporary gate for legacy Keychain service fallback.
+	MigrateKeychain bool
 }
 
 func newRootCmd(version string) *cobra.Command {
-	globals := &GlobalFlags{}
+	globals := &GlobalFlags{MigrateKeychain: true}
 	root := &cobra.Command{
 		Use:           "agent-postmark",
 		Short:         "Postmark delivery triage CLI for AI agents",
@@ -50,6 +52,17 @@ func newRootCmd(version string) *cobra.Command {
 	root.PersistentFlags().IntVar(&globals.MaxRetries, "max-retries", 2, "Maximum automatic retries for transient responses")
 	root.PersistentFlags().BoolVarP(&globals.Debug, "debug", "d", false, "Log redacted HTTP debug records to stderr")
 	root.PersistentFlags().BoolVar(&globals.Full, "full", false, "Return fuller API payloads where supported")
+	// KEYCHAIN-MIGRATION: Hidden temporary flags; remove with credential_migration.go.
+	root.PersistentFlags().BoolVar(&globals.MigrateKeychain, "migrate", true, "migrate legacy Keychain service credentials")
+	_ = root.PersistentFlags().MarkHidden("migrate")
+	noMigrate := root.PersistentFlags().Bool("no-migrate", false, "use legacy Keychain service credentials without prompting")
+	_ = root.PersistentFlags().MarkHidden("no-migrate")
+	root.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		if noMigrate != nil && *noMigrate {
+			globals.MigrateKeychain = false
+		}
+		applyConfiguredDefaults(cmd, globals)
+	}
 
 	registerUsage(root)
 	registerConfig(root)
