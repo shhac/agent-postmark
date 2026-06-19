@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/url"
 	"os"
 	"strconv"
@@ -36,12 +35,6 @@ var newAPIClient = api.New
 func withClient(cmdCtx context.Context, flags *GlobalFlags, fn func(context.Context, *resolvedContext) error) error {
 	resolved, err := resolve(flags)
 	if err != nil {
-		// KEYCHAIN-MIGRATION: This one setup problem must hard-exit so users cannot miss it.
-		var migrationErr *credential.MigrationRequiredError
-		if errors.As(err, &migrationErr) {
-			output.WriteError(output.Stderr(), agenterrors.Wrap(migrationErr, agenterrors.FixableByHuman).WithHint(migrationErr.Hint()))
-			return err
-		}
 		output.WriteError(output.Stderr(), err)
 		return nil
 	}
@@ -85,27 +78,15 @@ func resolve(flags *GlobalFlags) (*resolvedContext, error) {
 	serverStored := serverToken != ""
 	if profileName != "" {
 		if accountToken == "" {
-			// KEYCHAIN-MIGRATION: Require an explicit one-time migration when only the legacy service exists.
-			if token, err := credential.GetAccountWithMigration(profileName, flags.MigrateKeychain); err == nil {
+			if token, err := credential.GetAccount(profileName); err == nil {
 				accountToken = token
 				accountStored = true
-			} else {
-				var migrationErr *credential.MigrationRequiredError
-				if errors.As(err, &migrationErr) {
-					return nil, err
-				}
 			}
 		}
 		if serverToken == "" && serverAlias != "" {
-			// KEYCHAIN-MIGRATION: Require an explicit one-time migration when only the legacy service exists.
-			if token, err := credential.GetServerWithMigration(profileName, serverAlias, flags.MigrateKeychain); err == nil {
+			if token, err := credential.GetServer(profileName, serverAlias); err == nil {
 				serverToken = token
 				serverStored = true
-			} else {
-				var migrationErr *credential.MigrationRequiredError
-				if errors.As(err, &migrationErr) {
-					return nil, err
-				}
 			}
 		}
 	}

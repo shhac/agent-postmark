@@ -19,15 +19,6 @@ func registerAuth(root *cobra.Command, globals *GlobalFlags) {
 	auth := &cobra.Command{
 		Use:   "profiles",
 		Short: "Manage Postmark credential profiles",
-		// KEYCHAIN-MIGRATION: Temporary root action for `agent-postmark profiles --migrate`.
-		RunE: func(cmd *cobra.Command, args []string) error {
-			migrated, err := credential.MigrateLegacyCredentials()
-			if err != nil {
-				writeProfileCommandError(err)
-				return nil
-			}
-			return writeItem(map[string]any{"status": "migrated", "migrated": migrated}, "")
-		},
 	}
 	registerAuthAdd(auth)
 	registerAuthSetup(auth)

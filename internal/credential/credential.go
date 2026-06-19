@@ -2,7 +2,6 @@ package credential
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -103,8 +102,7 @@ func GetAccount(profile string) (string, error) {
 	if !ok || !current.AccountToken {
 		return "", &NotFoundError{Name: profile, Kind: AccountToken}
 	}
-	// KEYCHAIN-MIGRATION: Prefer the new service and require explicit migration for legacy-service tokens.
-	return getAccountWithMigration(profile, true)
+	return keychainGet(accountKeychainName(profile))
 }
 
 func GetServer(profile, server string) (string, error) {
@@ -118,13 +116,9 @@ func GetServer(profile, server string) (string, error) {
 	if !hasServer && !hasLegacyDefault {
 		return "", &NotFoundError{Name: profile + "/server/" + server, Kind: ServerToken}
 	}
-	// KEYCHAIN-MIGRATION: Prefer the new service and require explicit migration for legacy-service tokens.
-	token, err := getServerWithMigration(profile, server, true)
+	token, err := keychainGet(serverKeychainName(profile, server))
 	if err != nil && server != "default" {
-		var migrationErr *MigrationRequiredError
-		if !errors.As(err, &migrationErr) {
-			return "", &NotFoundError{Name: profile + "/server/" + server, Kind: ServerToken}
-		}
+		return "", &NotFoundError{Name: profile + "/server/" + server, Kind: ServerToken}
 	}
 	return token, err
 }
@@ -140,10 +134,8 @@ func Remove(name string) error {
 	}
 	if current.AccountToken {
 		_ = keychainDelete(accountKeychainName(name))
-		_ = keychainDelete(legacyKeychainName(name, AccountToken))
 	}
 	if current.ServerToken {
-		_ = keychainDelete(legacyKeychainName(name, ServerToken))
 		_ = keychainDelete(serverKeychainName(name, "default"))
 	}
 	for server := range current.Servers {
@@ -170,7 +162,6 @@ func RemoveServer(profile, server string) error {
 	}
 	if server == "default" {
 		current.ServerToken = false
-		_ = keychainDelete(legacyKeychainName(profile, ServerToken))
 	}
 	index[profile] = current
 	return writeIndex(index)
@@ -204,10 +195,6 @@ func Type(token string) string {
 	default:
 		return "postmark_token"
 	}
-}
-
-func legacyKeychainName(profile string, kind TokenKind) string {
-	return profile + ":" + string(kind)
 }
 
 func accountKeychainName(profile string) string {
