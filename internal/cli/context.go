@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shhac/lib-agent-cli/creds"
 	"github.com/spf13/cobra"
 
 	"github.com/shhac/agent-postmark/internal/api"
@@ -59,7 +60,7 @@ func withClient(cmdCtx context.Context, flags *GlobalFlags, fn func(context.Cont
 
 func resolve(flags *GlobalFlags) (*resolvedContext, error) {
 	cfg := config.Read()
-	profileName := firstNonEmpty(flags.Profile, os.Getenv("AGENT_POSTMARK_PROFILE"), cfg.DefaultProfile)
+	profileName := creds.FirstNonEmpty(flags.Profile, os.Getenv("AGENT_POSTMARK_PROFILE"), cfg.DefaultProfile)
 	profile := config.Profile{}
 	if profileName != "" {
 		if found, ok := cfg.Profiles[profileName]; ok {
@@ -67,19 +68,19 @@ func resolve(flags *GlobalFlags) (*resolvedContext, error) {
 		}
 	}
 
-	host := firstNonEmpty(flags.Host, os.Getenv("AGENT_POSTMARK_BASE_URL"), profile.Host, os.Getenv("AGENT_POSTMARK_HOST"), config.DefaultHost)
-	serverAlias := firstNonEmpty(flags.Server, os.Getenv("AGENT_POSTMARK_SERVER"), profile.DefaultServer)
+	host := creds.FirstNonEmpty(flags.Host, os.Getenv("AGENT_POSTMARK_BASE_URL"), profile.Host, os.Getenv("AGENT_POSTMARK_HOST"), config.DefaultHost)
+	serverAlias := creds.FirstNonEmpty(flags.Server, os.Getenv("AGENT_POSTMARK_SERVER"), profile.DefaultServer)
 	if serverAlias == "" && len(profile.Servers) == 1 {
 		for alias := range profile.Servers {
 			serverAlias = alias
 		}
 	}
 	serverProfile := profile.Servers[serverAlias]
-	serverID := firstNonZero(flags.ServerID, serverProfile.ServerID, envInt("AGENT_POSTMARK_SERVER_ID"), envInt("POSTMARK_SERVER_ID"))
-	stream := firstNonEmpty(flags.MessageStream, serverProfile.MessageStream, os.Getenv("AGENT_POSTMARK_MESSAGE_STREAM"), "outbound")
+	serverID := creds.FirstNonZero(flags.ServerID, serverProfile.ServerID, envInt("AGENT_POSTMARK_SERVER_ID"), envInt("POSTMARK_SERVER_ID"))
+	stream := creds.FirstNonEmpty(flags.MessageStream, serverProfile.MessageStream, os.Getenv("AGENT_POSTMARK_MESSAGE_STREAM"), "outbound")
 
-	accountToken := firstNonEmpty(flags.AccountToken, os.Getenv("AGENT_POSTMARK_ACCOUNT_TOKEN"), os.Getenv("POSTMARK_ACCOUNT_TOKEN"))
-	serverToken := firstNonEmpty(flags.ServerToken, os.Getenv("AGENT_POSTMARK_SERVER_TOKEN"), os.Getenv("POSTMARK_SERVER_TOKEN"))
+	accountToken := creds.FirstNonEmpty(flags.AccountToken, os.Getenv("AGENT_POSTMARK_ACCOUNT_TOKEN"), os.Getenv("POSTMARK_ACCOUNT_TOKEN"))
+	serverToken := creds.FirstNonEmpty(flags.ServerToken, os.Getenv("AGENT_POSTMARK_SERVER_TOKEN"), os.Getenv("POSTMARK_SERVER_TOKEN"))
 	accountStored := accountToken != ""
 	serverStored := serverToken != ""
 	if profileName != "" {
@@ -198,24 +199,6 @@ func queryPairs(values []string) url.Values {
 		}
 	}
 	return q
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if value != "" {
-			return value
-		}
-	}
-	return ""
-}
-
-func firstNonZero(values ...int) int {
-	for _, value := range values {
-		if value != 0 {
-			return value
-		}
-	}
-	return 0
 }
 
 func envInt(name string) int {

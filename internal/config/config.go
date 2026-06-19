@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/shhac/lib-agent-cli/creds"
 	"github.com/shhac/lib-agent-cli/xdg"
 )
 
@@ -250,7 +251,7 @@ func normalizeProfile(profile Profile) Profile {
 		profile.Servers = map[string]ServerProfile{}
 	}
 	if len(profile.Servers) == 0 && (profile.LegacyDefaultServerID != 0 || profile.LegacyMessageStream != "") {
-		profile.DefaultServer = firstNonEmpty(profile.DefaultServer, "default")
+		profile.DefaultServer = creds.FirstNonEmpty(profile.DefaultServer, "default")
 		profile.Servers[profile.DefaultServer] = ServerProfile{
 			ServerID:      profile.LegacyDefaultServerID,
 			MessageStream: profile.LegacyMessageStream,
@@ -268,15 +269,6 @@ func normalizeServer(server ServerProfile) ServerProfile {
 		server.MessageStream = "outbound"
 	}
 	return server
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if value != "" {
-			return value
-		}
-	}
-	return ""
 }
 
 func intPtr(value int) *int { return &value }

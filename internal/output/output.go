@@ -107,7 +107,7 @@ func Print(data any, format Format, prune bool) {
 		data = decoded
 	}
 	if prune {
-		data = pruneNulls(data)
+		data = out.PruneNils(data)
 	}
 	_ = out.Print(Stdout(), data, format, nil)
 }
@@ -120,24 +120,12 @@ func WriteRawJSON(raw json.RawMessage, format Format, prune bool) {
 	Print(decoded, format, prune)
 }
 
-// NDJSONWriter writes one JSON record per line with HTML escaping disabled.
-type NDJSONWriter struct {
-	enc *json.Encoder
-}
+// NDJSONWriter writes one JSON record per line with HTML escaping disabled. The
+// writer and its item/meta methods come from the shared contract; only the
+// Postmark-shaped Pagination trailer below stays local.
+type NDJSONWriter = out.NDJSONWriter
 
-func NewNDJSONWriter(w io.Writer) *NDJSONWriter {
-	enc := json.NewEncoder(w)
-	enc.SetEscapeHTML(false)
-	return &NDJSONWriter{enc: enc}
-}
-
-func (n *NDJSONWriter) WriteItem(item any) error {
-	return n.enc.Encode(item)
-}
-
-func (n *NDJSONWriter) WriteMetaLine(key string, value any) error {
-	return n.enc.Encode(map[string]any{key: value})
-}
+var NewNDJSONWriter = out.NewNDJSONWriter
 
 // Pagination is Postmark-shaped (a total-count + next-offset trailer), so it
 // stays local rather than using out.Pagination.
@@ -164,28 +152,6 @@ func normalizeYAMLNumbers(v any) any {
 			return val
 		}
 		return int64(val)
-	default:
-		return v
-	}
-}
-
-func pruneNulls(v any) any {
-	switch val := v.(type) {
-	case map[string]any:
-		o := make(map[string]any, len(val))
-		for k, child := range val {
-			if child == nil {
-				continue
-			}
-			o[k] = pruneNulls(child)
-		}
-		return o
-	case []any:
-		o := make([]any, len(val))
-		for i, child := range val {
-			o[i] = pruneNulls(child)
-		}
-		return o
 	default:
 		return v
 	}
