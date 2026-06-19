@@ -1,28 +1,63 @@
+// Package output re-exports the shared output contract from lib-agent-output,
+// keeping the internal/output import path while the wire mechanism (format
+// parsing, JSON/YAML encoding, error rendering) lives in one place. What stays
+// local is agent-postmark policy: the writer indirection used by tests, the
+// Postmark-shaped pagination trailer, and the YAML number-normalization that
+// renders whole floats as ints. (Migration shim.)
 package output
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"math"
 	"os"
 	"sync"
 
-	agenterrors "github.com/shhac/agent-postmark/internal/errors"
+	out "github.com/shhac/lib-agent-output"
 	"gopkg.in/yaml.v3"
 )
+
+// Format and its values come from the shared contract; ParseFormat is therefore
+// the family's lenient parser (accepts "ndjson" as well as "jsonl",
+// case-insensitive).
+type Format = out.Format
+
+const (
+	FormatJSON   = out.FormatJSON
+	FormatYAML   = out.FormatYAML
+	FormatNDJSON = out.FormatNDJSON
+)
+
+var (
+	ParseFormat   = out.ParseFormat
+	ResolveFormat = out.ResolveFormat
+	WriteError    = out.WriteError
+)
+
+// init registers agent-postmark's YAML encoder with lib-agent-output, so YAML
+// support (and its yaml.v3 dependency) stays in this CLI while the core library
+// remains dependency-free. The encoder normalizes whole-number floats to ints
+// so JSON-decoded numbers render as 5 rather than 5.0.
+func init() {
+	out.RegisterEncoder(out.FormatYAML, func(v any) ([]byte, error) {
+		// v arrives already JSON-decoded and pruned by Print, so the encoder
+		// only normalizes numbers (whole floats -> ints) and renders YAML.
+		var buf bytes.Buffer
+		enc := yaml.NewEncoder(&buf)
+		enc.SetIndent(2)
+		if err := enc.Encode(normalizeYAMLNumbers(v)); err != nil {
+			return nil, err
+		}
+		_ = enc.Close()
+		return buf.Bytes(), nil
+	})
+}
 
 var (
 	writersMu sync.Mutex
 	stdout    io.Writer = os.Stdout
 	stderr    io.Writer = os.Stderr
-)
-
-type Format string
-
-const (
-	FormatJSON   Format = "json"
-	FormatYAML   Format = "yaml"
-	FormatNDJSON Format = "jsonl"
 )
 
 func Stdout() io.Writer {
@@ -37,14 +72,14 @@ func Stderr() io.Writer {
 	return stderr
 }
 
-func SetWriters(out, err io.Writer) func() {
+func SetWriters(o, e io.Writer) func() {
 	writersMu.Lock()
 	oldOut, oldErr := stdout, stderr
-	if out != nil {
-		stdout = out
+	if o != nil {
+		stdout = o
 	}
-	if err != nil {
-		stderr = err
+	if e != nil {
+		stderr = e
 	}
 	writersMu.Unlock()
 	return func() {
@@ -54,33 +89,27 @@ func SetWriters(out, err io.Writer) func() {
 	}
 }
 
-func ParseFormat(s string) (Format, error) {
-	switch s {
-	case "json":
-		return FormatJSON, nil
-	case "yaml":
-		return FormatYAML, nil
-	case "jsonl", "ndjson":
-		return FormatNDJSON, nil
-	default:
-		return "", agenterrors.Newf(agenterrors.FixableByAgent, "unknown format %q, expected: json, yaml, jsonl", s)
-	}
-}
-
-func ResolveFormat(flagFormat string, defaultFormat Format) (Format, error) {
-	if flagFormat == "" {
-		return defaultFormat, nil
-	}
-	return ParseFormat(flagFormat)
-}
-
+// Print prunes (when requested) then encodes data in the given format via the
+// shared encoder. JSON prunes the typed value directly (no round-trip), exactly
+// as the pre-migration printJSON did. YAML first round-trips through JSON so its
+// number-normalization and pruning operate on decoded maps, matching the old
+// printYAML.
 func Print(data any, format Format, prune bool) {
-	switch format {
-	case FormatYAML:
-		printYAML(data, prune)
-	default:
-		printJSON(data, prune)
+	if format == FormatYAML {
+		b, err := json.Marshal(data)
+		if err != nil {
+			return
+		}
+		var decoded any
+		if err := json.Unmarshal(b, &decoded); err != nil {
+			return
+		}
+		data = decoded
 	}
+	if prune {
+		data = pruneNulls(data)
+	}
+	_ = out.Print(Stdout(), data, format, nil)
 }
 
 func WriteRawJSON(raw json.RawMessage, format Format, prune bool) {
@@ -91,23 +120,7 @@ func WriteRawJSON(raw json.RawMessage, format Format, prune bool) {
 	Print(decoded, format, prune)
 }
 
-func WriteError(w io.Writer, err error) {
-	var aerr *agenterrors.APIError
-	if !agenterrors.As(err, &aerr) {
-		aerr = agenterrors.Wrap(err, agenterrors.FixableByAgent)
-	}
-	payload := map[string]any{
-		"error":      aerr.Message,
-		"fixable_by": string(aerr.FixableBy),
-	}
-	if aerr.Hint != "" {
-		payload["hint"] = aerr.Hint
-	}
-	enc := json.NewEncoder(w)
-	enc.SetEscapeHTML(false)
-	_ = enc.Encode(payload)
-}
-
+// NDJSONWriter writes one JSON record per line with HTML escaping disabled.
 type NDJSONWriter struct {
 	enc *json.Encoder
 }
@@ -126,38 +139,12 @@ func (n *NDJSONWriter) WriteMetaLine(key string, value any) error {
 	return n.enc.Encode(map[string]any{key: value})
 }
 
+// Pagination is Postmark-shaped (a total-count + next-offset trailer), so it
+// stays local rather than using out.Pagination.
 type Pagination struct {
 	HasMore    bool `json:"has_more"`
 	TotalItems int  `json:"total_items,omitempty"`
 	NextOffset int  `json:"next_offset,omitempty"`
-}
-
-func printJSON(data any, prune bool) {
-	if prune {
-		data = pruneNulls(data)
-	}
-	enc := json.NewEncoder(Stdout())
-	enc.SetIndent("", "  ")
-	enc.SetEscapeHTML(false)
-	_ = enc.Encode(data)
-}
-
-func printYAML(data any, prune bool) {
-	b, err := json.Marshal(data)
-	if err != nil {
-		return
-	}
-	var decoded any
-	if err := json.Unmarshal(b, &decoded); err != nil {
-		return
-	}
-	if prune {
-		decoded = pruneNulls(decoded)
-	}
-	decoded = normalizeYAMLNumbers(decoded)
-	enc := yaml.NewEncoder(Stdout())
-	enc.SetIndent(2)
-	_ = enc.Encode(decoded)
 }
 
 func normalizeYAMLNumbers(v any) any {
@@ -185,20 +172,20 @@ func normalizeYAMLNumbers(v any) any {
 func pruneNulls(v any) any {
 	switch val := v.(type) {
 	case map[string]any:
-		out := make(map[string]any, len(val))
+		o := make(map[string]any, len(val))
 		for k, child := range val {
 			if child == nil {
 				continue
 			}
-			out[k] = pruneNulls(child)
+			o[k] = pruneNulls(child)
 		}
-		return out
+		return o
 	case []any:
-		out := make([]any, len(val))
+		o := make([]any, len(val))
 		for i, child := range val {
-			out[i] = pruneNulls(child)
+			o[i] = pruneNulls(child)
 		}
-		return out
+		return o
 	default:
 		return v
 	}

@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/shhac/lib-agent-cli/xdg"
 )
 
 const DefaultHost = "https://api.postmarkapp.com"
@@ -59,11 +61,7 @@ func ConfigDir() string {
 	if overrideDir != "" {
 		return overrideDir
 	}
-	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return filepath.Join(xdg, "agent-postmark")
-	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "agent-postmark")
+	return xdg.ConfigDir("agent-postmark")
 }
 
 func ConfigPath() string {
