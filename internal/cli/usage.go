@@ -48,10 +48,12 @@ func registerUsage(root *cobra.Command) {
 				},
 				"mutations": []string{
 					"agent-postmark domains verify-dkim <domain-id> --yes",
+					"agent-postmark domains verify-spf <domain-id> --yes",
 					"agent-postmark bounces activate <bounce-id> --yes",
 					"agent-postmark suppressions create user@example.com --yes",
 					"agent-postmark suppressions delete user@example.com --yes",
 					"agent-postmark messages inbound-retry <message-id> --yes",
+					"agent-postmark messages inbound-bypass <message-id> --yes",
 				},
 				"safety": []string{
 					"Secrets are stored in Keychain and never printed.",

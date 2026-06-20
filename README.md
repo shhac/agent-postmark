@@ -97,10 +97,12 @@ State-changing commands require `--yes`:
 
 ```bash
 agent-postmark domains verify-dkim 501 --yes
+agent-postmark domains verify-spf 501 --yes
 agent-postmark bounces activate 9001 --yes
 agent-postmark suppressions create user@example.com --yes
 agent-postmark suppressions delete user@example.com --yes
 agent-postmark messages inbound-retry in-1 --yes
+agent-postmark messages inbound-bypass in-1 --yes
 ```
 
 ## Development
