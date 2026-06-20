@@ -1,21 +1,20 @@
 // Package output re-exports the shared output contract from lib-agent-output,
 // keeping the internal/output import path while the wire mechanism (format
 // parsing, JSON/YAML encoding, error rendering) lives in one place. What stays
-// local is agent-postmark policy: the writer indirection used by tests, the
-// Postmark-shaped pagination trailer, and the YAML number-normalization that
-// renders whole floats as ints. (Migration shim.)
+// local is agent-postmark policy: the writer indirection used by tests and the
+// Postmark-shaped pagination trailer. YAML support (and its yaml.v3 dependency)
+// comes from the shared lib-agent-cli/yaml encoder, blank-imported below.
+// (Migration shim.)
 package output
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
-	"math"
 	"os"
 	"sync"
 
+	_ "github.com/shhac/lib-agent-cli/yaml" // registers the shared YAML encoder for out.FormatYAML
 	out "github.com/shhac/lib-agent-output"
-	"gopkg.in/yaml.v3"
 )
 
 // Format and its values come from the shared contract; ParseFormat is therefore
@@ -34,25 +33,6 @@ var (
 	ResolveFormat = out.ResolveFormat
 	WriteError    = out.WriteError
 )
-
-// init registers agent-postmark's YAML encoder with lib-agent-output, so YAML
-// support (and its yaml.v3 dependency) stays in this CLI while the core library
-// remains dependency-free. The encoder normalizes whole-number floats to ints
-// so JSON-decoded numbers render as 5 rather than 5.0.
-func init() {
-	out.RegisterEncoder(out.FormatYAML, func(v any) ([]byte, error) {
-		// v arrives already JSON-decoded and pruned by Print, so the encoder
-		// only normalizes numbers (whole floats -> ints) and renders YAML.
-		var buf bytes.Buffer
-		enc := yaml.NewEncoder(&buf)
-		enc.SetIndent(2)
-		if err := enc.Encode(normalizeYAMLNumbers(v)); err != nil {
-			return nil, err
-		}
-		_ = enc.Close()
-		return buf.Bytes(), nil
-	})
-}
 
 var (
 	writersMu sync.Mutex
@@ -133,26 +113,4 @@ type Pagination struct {
 	HasMore    bool `json:"has_more"`
 	TotalItems int  `json:"total_items,omitempty"`
 	NextOffset int  `json:"next_offset,omitempty"`
-}
-
-func normalizeYAMLNumbers(v any) any {
-	switch val := v.(type) {
-	case map[string]any:
-		for k, child := range val {
-			val[k] = normalizeYAMLNumbers(child)
-		}
-		return val
-	case []any:
-		for i, child := range val {
-			val[i] = normalizeYAMLNumbers(child)
-		}
-		return val
-	case float64:
-		if math.IsInf(val, 0) || math.IsNaN(val) || math.Trunc(val) != val {
-			return val
-		}
-		return int64(val)
-	default:
-		return v
-	}
 }
