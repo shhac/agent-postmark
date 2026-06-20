@@ -39,9 +39,9 @@ func withClient(cmdCtx context.Context, flags *GlobalFlags, fn func(context.Cont
 		return nil
 	}
 	ctx := cmdCtx
-	if flags.Timeout > 0 {
+	if flags.TimeoutMS > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(flags.Timeout)*time.Millisecond)
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(flags.TimeoutMS)*time.Millisecond)
 		defer cancel()
 	}
 	if err := fn(ctx, resolved); err != nil {

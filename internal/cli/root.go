@@ -7,9 +7,15 @@ import (
 
 	"github.com/shhac/agent-postmark/internal/config"
 	"github.com/shhac/agent-postmark/internal/output"
+	libcli "github.com/shhac/lib-agent-cli/cli"
 )
 
+// GlobalFlags carries the persistent flags shared by every command. The shared
+// --format/--timeout/--debug live in the embedded libcli.Globals; the rest are
+// Postmark-specific (profile/credential/server/stream selection).
 type GlobalFlags struct {
+	libcli.Globals // Format, TimeoutMS, Debug
+
 	Profile       string
 	Host          string
 	AccountToken  string
@@ -17,38 +23,34 @@ type GlobalFlags struct {
 	Server        string
 	ServerID      int
 	MessageStream string
-	Format        string
-	Timeout       int
 	MaxRetries    int
-	Debug         bool
 	Full          bool
 }
 
 func newRootCmd(version string) *cobra.Command {
 	globals := &GlobalFlags{}
-	root := &cobra.Command{
-		Use:           "agent-postmark",
-		Short:         "Postmark delivery triage CLI for AI agents",
-		Version:       version,
-		SilenceUsage:  true,
-		SilenceErrors: true,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			applyConfiguredDefaults(cmd, globals)
-		},
-	}
 
-	root.PersistentFlags().StringVarP(&globals.Profile, "profile", "p", "", "Profile alias (or AGENT_POSTMARK_PROFILE)")
-	root.PersistentFlags().StringVar(&globals.Host, "host", "", "Postmark API host override")
-	root.PersistentFlags().StringVar(&globals.AccountToken, "account-token", "", "Account token override; never printed or persisted")
-	root.PersistentFlags().StringVar(&globals.ServerToken, "server-token", "", "Server token override; never printed or persisted")
-	root.PersistentFlags().StringVar(&globals.Server, "server", "", "Server alias override within the selected profile")
-	root.PersistentFlags().IntVar(&globals.ServerID, "server-id", 0, "Numeric Postmark server ID override")
-	root.PersistentFlags().StringVar(&globals.MessageStream, "stream", "", "Message stream override, such as outbound or broadcasts")
-	root.PersistentFlags().StringVarP(&globals.Format, "format", "f", "", "Output format: json, yaml, jsonl")
-	root.PersistentFlags().IntVarP(&globals.Timeout, "timeout", "t", 0, "Request timeout in milliseconds")
-	root.PersistentFlags().IntVar(&globals.MaxRetries, "max-retries", 2, "Maximum automatic retries for transient responses")
-	root.PersistentFlags().BoolVarP(&globals.Debug, "debug", "d", false, "Log redacted HTTP debug records to stderr")
-	root.PersistentFlags().BoolVar(&globals.Full, "full", false, "Return fuller API payloads where supported")
+	var root *cobra.Command
+	root = libcli.NewRoot(libcli.Options{
+		Use:            "agent-postmark",
+		Short:          "Postmark delivery triage CLI for AI agents",
+		Version:        version,
+		Globals:        &globals.Globals,
+		DefaultFormat:  output.FormatNDJSON,
+		ConfigDefaults: func() { applyConfiguredDefaults(root, globals) },
+		UnknownHint:    "run 'agent-postmark usage' to see the available domains",
+	})
+
+	pf := root.PersistentFlags()
+	pf.StringVarP(&globals.Profile, "profile", "p", "", "Profile alias (or AGENT_POSTMARK_PROFILE)")
+	pf.StringVar(&globals.Host, "host", "", "Postmark API host override")
+	pf.StringVar(&globals.AccountToken, "account-token", "", "Account token override; never printed or persisted")
+	pf.StringVar(&globals.ServerToken, "server-token", "", "Server token override; never printed or persisted")
+	pf.StringVar(&globals.Server, "server", "", "Server alias override within the selected profile")
+	pf.IntVar(&globals.ServerID, "server-id", 0, "Numeric Postmark server ID override")
+	pf.StringVar(&globals.MessageStream, "stream", "", "Message stream override, such as outbound or broadcasts")
+	pf.IntVar(&globals.MaxRetries, "max-retries", 2, "Maximum automatic retries for transient responses")
+	pf.BoolVar(&globals.Full, "full", false, "Return fuller API payloads where supported")
 
 	registerUsage(root)
 	registerConfig(root)
@@ -64,18 +66,28 @@ func applyConfiguredDefaults(cmd *cobra.Command, globals *GlobalFlags) {
 	cfg := config.Read()
 	flags := cmd.Root().PersistentFlags()
 	if cfg.Defaults.TimeoutMS != nil && !flags.Changed("timeout") {
-		globals.Timeout = *cfg.Defaults.TimeoutMS
+		globals.TimeoutMS = *cfg.Defaults.TimeoutMS
 	}
 	if cfg.Defaults.MaxRetries != nil && !flags.Changed("max-retries") {
 		globals.MaxRetries = *cfg.Defaults.MaxRetries
 	}
 }
 
-func Execute(version string) error {
+// NewRootCmd builds the root command after applying the auth→profiles alias
+// rewrite, so main can hand it straight to libcli.Run.
+func NewRootCmd(version string) *cobra.Command {
 	if len(os.Args) > 1 && os.Args[1] == "auth" {
 		os.Args[1] = "profiles"
 	}
-	err := newRootCmd(version).Execute()
+	return newRootCmd(version)
+}
+
+// Execute builds the root, runs it, and renders any bubbled error as the
+// family's structured JSON on stderr exactly once, returning it for the caller
+// to set an exit code. main uses libcli.Run instead (render + exit); Execute is
+// the package-level seam that tests drive to cover the top-level error sink.
+func Execute(version string) error {
+	err := NewRootCmd(version).Execute()
 	if err != nil {
 		output.WriteError(output.Stderr(), err)
 	}
