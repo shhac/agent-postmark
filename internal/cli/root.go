@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -78,7 +77,7 @@ func Execute(version string) error {
 	}
 	err := newRootCmd(version).Execute()
 	if err != nil {
-		_, _ = fmt.Fprintln(output.Stderr(), err)
+		output.WriteError(output.Stderr(), err)
 	}
 	return err
 }

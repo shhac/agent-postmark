@@ -1,9 +1,13 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
+
+	"github.com/shhac/agent-postmark/internal/output"
 )
 
 type errorPayload struct {
@@ -49,6 +53,34 @@ func TestErrorContractAuthUsesProfilesHint(t *testing.T) {
 	}
 	if strings.Contains(payload.Hint, "auth check") {
 		t.Fatalf("hint should not advertise auth alias: %q", payload.Hint)
+	}
+}
+
+// TestExecuteRendersBubbledErrorStructured guards the top-level error sink:
+// errors that escape every command (here, cobra's unknown-command error) must
+// reach stderr as a single structured {error,fixable_by} line, never plain
+// text. This path is only reachable through the package-level Execute, which
+// reads os.Args, so the other tests' runCLI helper does not cover it.
+func TestExecuteRendersBubbledErrorStructured(t *testing.T) {
+	var stderr bytes.Buffer
+	restore := output.SetWriters(nil, &stderr)
+	t.Cleanup(restore)
+
+	oldArgs := os.Args
+	os.Args = []string{"agent-postmark", "boguscmd"}
+	t.Cleanup(func() { os.Args = oldArgs })
+
+	if err := Execute("test"); err == nil {
+		t.Fatal("Execute(boguscmd) = nil error, want non-nil")
+	}
+
+	out := strings.TrimRight(stderr.String(), "\n")
+	if strings.Contains(out, "\n") {
+		t.Fatalf("stderr is not a single line:\n%s", out)
+	}
+	payload := parseErrorPayload(t, out)
+	if payload.FixableBy != "agent" {
+		t.Fatalf("fixable_by = %q, want agent", payload.FixableBy)
 	}
 }
 
