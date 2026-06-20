@@ -161,8 +161,7 @@ func writeMessageContents(rows []json.RawMessage, flagFormat string) error {
 	}
 	format, err := output.ResolveFormat(flagFormat, defaultFormat)
 	if err != nil {
-		output.WriteError(output.Stderr(), err)
-		return nil
+		return err
 	}
 	if format == output.FormatNDJSON {
 		writer := output.NewNDJSONWriter(output.Stdout())

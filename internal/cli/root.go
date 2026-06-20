@@ -59,7 +59,28 @@ func newRootCmd(version string) *cobra.Command {
 	registerInvestigate(root, globals)
 	registerAPI(root, globals)
 
+	installGroupUnknownHandlers(root)
 	return root
+}
+
+// installGroupUnknownHandlers walks the tree and gives every group node (one
+// with subcommands but no action of its own) the same structured
+// unknown-subcommand behaviour the root already has: an unknown subcommand
+// returns a fixable_by:agent error listing the group's valid subcommands rather
+// than cobra's usage text, and no args falls back to help. Done as a post-pass
+// so each group is already attached and CommandPath() resolves the full path
+// for the hint (e.g. "agent-postmark profiles servers").
+func installGroupUnknownHandlers(root *cobra.Command) {
+	var walk func(*cobra.Command)
+	walk = func(cmd *cobra.Command) {
+		for _, sub := range cmd.Commands() {
+			if len(sub.Commands()) > 0 && sub.RunE == nil && sub.Run == nil {
+				libcli.HandleUnknownCommand(sub, "run '"+sub.CommandPath()+" --help' to see the available subcommands")
+			}
+			walk(sub)
+		}
+	}
+	walk(root)
 }
 
 func applyConfiguredDefaults(cmd *cobra.Command, globals *GlobalFlags) {

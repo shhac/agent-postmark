@@ -35,8 +35,7 @@ var newAPIClient = api.New
 func withClient(cmdCtx context.Context, flags *GlobalFlags, fn func(context.Context, *resolvedContext) error) error {
 	resolved, err := resolve(flags)
 	if err != nil {
-		output.WriteError(output.Stderr(), err)
-		return nil
+		return err
 	}
 	ctx := cmdCtx
 	if flags.TimeoutMS > 0 {
@@ -44,11 +43,7 @@ func withClient(cmdCtx context.Context, flags *GlobalFlags, fn func(context.Cont
 		ctx, cancel = context.WithTimeout(ctx, time.Duration(flags.TimeoutMS)*time.Millisecond)
 		defer cancel()
 	}
-	if err := fn(ctx, resolved); err != nil {
-		output.WriteError(output.Stderr(), err)
-		return nil
-	}
-	return nil
+	return fn(ctx, resolved)
 }
 
 func resolve(flags *GlobalFlags) (*resolvedContext, error) {
@@ -113,8 +108,7 @@ func resolve(flags *GlobalFlags) (*resolvedContext, error) {
 func writeItem(data any, flagFormat string) error {
 	format, err := output.ResolveFormat(flagFormat, output.FormatJSON)
 	if err != nil {
-		output.WriteError(output.Stderr(), err)
-		return nil
+		return err
 	}
 	output.Print(data, format, true)
 	return nil
@@ -123,8 +117,7 @@ func writeItem(data any, flagFormat string) error {
 func writeRaw(raw json.RawMessage, flagFormat string) error {
 	format, err := output.ResolveFormat(flagFormat, output.FormatJSON)
 	if err != nil {
-		output.WriteError(output.Stderr(), err)
-		return nil
+		return err
 	}
 	output.WriteRawJSON(redactRaw(raw), format, true)
 	return nil
@@ -133,8 +126,7 @@ func writeRaw(raw json.RawMessage, flagFormat string) error {
 func writeList(items []json.RawMessage, total, offset, count int, resource, flagFormat string, full bool) error {
 	format, err := output.ResolveFormat(flagFormat, output.FormatNDJSON)
 	if err != nil {
-		output.WriteError(output.Stderr(), err)
-		return nil
+		return err
 	}
 	if format != output.FormatNDJSON {
 		decoded := make([]any, 0, len(items))
@@ -185,14 +177,12 @@ func addCountOffsetFlags(cmd *cobra.Command, count *int, offset *int) {
 	runE := cmd.RunE
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		if *count < 0 {
-			output.WriteError(output.Stderr(), agenterrors.New("invalid --count", agenterrors.FixableByAgent).
-				WithHint("Use --count 0 or a positive number. To mirror a UI page, use --offset (page-1)*count."))
-			return nil
+			return agenterrors.New("invalid --count", agenterrors.FixableByAgent).
+				WithHint("Use --count 0 or a positive number. To mirror a UI page, use --offset (page-1)*count.")
 		}
 		if *offset < 0 {
-			output.WriteError(output.Stderr(), agenterrors.New("invalid --offset", agenterrors.FixableByAgent).
-				WithHint("Use --offset 0 or a positive number. To mirror page 6 with --count 50, use --offset 250."))
-			return nil
+			return agenterrors.New("invalid --offset", agenterrors.FixableByAgent).
+				WithHint("Use --offset 0 or a positive number. To mirror page 6 with --count 50, use --offset 250.")
 		}
 		return runE(cmd, args)
 	}

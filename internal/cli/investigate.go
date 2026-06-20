@@ -9,7 +9,6 @@ import (
 
 	"github.com/shhac/agent-postmark/internal/api"
 	agenterrors "github.com/shhac/agent-postmark/internal/errors"
-	"github.com/shhac/agent-postmark/internal/output"
 )
 
 func registerInvestigate(root *cobra.Command, globals *GlobalFlags) {
@@ -29,9 +28,8 @@ func registerInvestigateDelivery(parent *cobra.Command, globals *GlobalFlags) {
 		Short: "Collect message and bounce evidence for a recipient",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if email == "" {
-				output.WriteError(output.Stderr(), agenterrors.New("missing --email", agenterrors.FixableByAgent).
-					WithHint("Provide the recipient address to search Postmark messages and bounces."))
-				return nil
+				return agenterrors.New("missing --email", agenterrors.FixableByAgent).
+					WithHint("Provide the recipient address to search Postmark messages and bounces.")
 			}
 			return withClient(cmd.Context(), globals, func(ctx context.Context, resolved *resolvedContext) error {
 				q := url.Values{"count": {"20"}, "offset": {"0"}, "messagestream": {resolved.MessageStream}}

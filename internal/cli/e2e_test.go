@@ -74,8 +74,10 @@ func runCLIWithSetup(t *testing.T, setup func(), args ...string) (string, string
 		"--account-token", "account_mock",
 		"--server-token", "server_mock",
 	}, args...))
+	// Mirror libcli.Run: a command error bubbles up unrendered, and the single
+	// sink renders it once to stderr. The test captures that via output.Stderr().
 	if err := cmd.Execute(); err != nil {
-		t.Fatalf("execute: %v", err)
+		output.WriteError(output.Stderr(), err)
 	}
 	return stdout.String(), stderr.String(), doer
 }

@@ -7,7 +7,6 @@ import (
 
 	"github.com/shhac/agent-postmark/internal/config"
 	agenterrors "github.com/shhac/agent-postmark/internal/errors"
-	"github.com/shhac/agent-postmark/internal/output"
 )
 
 func registerConfig(root *cobra.Command) {
@@ -33,14 +32,12 @@ func registerConfig(root *cobra.Command) {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			value, err := strconv.Atoi(args[1])
 			if err != nil {
-				output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByAgent).
-					WithHint("Config values must be integers, for example 'agent-postmark config set timeout_ms 30000'."))
-				return nil
+				return agenterrors.Wrap(err, agenterrors.FixableByAgent).
+					WithHint("Config values must be integers, for example 'agent-postmark config set timeout_ms 30000'.")
 			}
 			if err := config.SetDefaultValue(args[0], value); err != nil {
-				output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByAgent).
-					WithHint("Supported config keys are timeout_ms and max_retries."))
-				return nil
+				return agenterrors.Wrap(err, agenterrors.FixableByAgent).
+					WithHint("Supported config keys are timeout_ms and max_retries.")
 			}
 			return writeItem(map[string]any{"status": "set", "key": args[0], "value": value}, "")
 		},
@@ -51,9 +48,8 @@ func registerConfig(root *cobra.Command) {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := config.UnsetDefaultValue(args[0]); err != nil {
-				output.WriteError(output.Stderr(), agenterrors.Wrap(err, agenterrors.FixableByAgent).
-					WithHint("Supported config keys are timeout_ms and max_retries."))
-				return nil
+				return agenterrors.Wrap(err, agenterrors.FixableByAgent).
+					WithHint("Supported config keys are timeout_ms and max_retries.")
 			}
 			return writeItem(map[string]any{"status": "unset", "key": args[0]}, "")
 		},
