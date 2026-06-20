@@ -110,14 +110,6 @@ func resolve(flags *GlobalFlags) (*resolvedContext, error) {
 	}, nil
 }
 
-func requireServer(ctx *resolvedContext) error {
-	if ctx.ServerID == 0 {
-		return agenterrors.New("missing server id", agenterrors.FixableByAgent).
-			WithHint("Run 'agent-postmark servers list' or set one with 'agent-postmark profiles servers update <profile> <server> --server-id <id>'.")
-	}
-	return nil
-}
-
 func writeItem(data any, flagFormat string) error {
 	format, err := output.ResolveFormat(flagFormat, output.FormatJSON)
 	if err != nil {
