@@ -94,7 +94,7 @@ func registerMessages(root *cobra.Command, globals *GlobalFlags) {
 
 	cmd.AddCommand(serverGetCommand("get <message-id>", "Get outbound message details", globals, "/messages/outbound/%s/details"))
 	cmd.AddCommand(messageContentCommand(globals))
-	cmd.AddCommand(serverGetCommand("dump <message-id>", "Get outbound message dump", globals, "/messages/outbound/%s/dump"))
+	cmd.AddCommand(singleGetCommand("dump <message-id>", "Get outbound message dump", globals, api.ServerToken, "/messages/outbound/%s/dump"))
 	cmd.AddCommand(serverGetCommand("inbound-get <message-id>", "Get inbound message details", globals, "/messages/inbound/%s/details"))
 	cmd.AddCommand(serverPutCommand("inbound-retry <message-id>", "Retry inbound message processing", globals, "/messages/inbound/%s/retry", "Retrying inbound processing can trigger downstream processing again."))
 	cmd.AddCommand(serverPutCommand("inbound-bypass <message-id>", "Bypass inbound message rules", globals, "/messages/inbound/%s/bypass", "Bypassing inbound rules can deliver a message that rules previously blocked."))

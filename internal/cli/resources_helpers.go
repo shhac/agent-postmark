@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"strconv"
 
 	"github.com/spf13/cobra"
+
+	libcli "github.com/shhac/lib-agent-cli/cli"
 
 	"github.com/shhac/agent-postmark/internal/api"
 	agenterrors "github.com/shhac/agent-postmark/internal/errors"
@@ -34,14 +37,54 @@ func accountListCommand(use, short string, globals *GlobalFlags, path, envelope 
 }
 
 func accountGetCommand(use, short string, globals *GlobalFlags, pathFormat string) *cobra.Command {
-	return getCommand(use, short, globals, api.AccountToken, pathFormat)
+	return multiGetCommand(use, short, globals, api.AccountToken, pathFormat)
 }
 
 func serverGetCommand(use, short string, globals *GlobalFlags, pathFormat string) *cobra.Command {
-	return getCommand(use, short, globals, api.ServerToken, pathFormat)
+	return multiGetCommand(use, short, globals, api.ServerToken, pathFormat)
 }
 
-func getCommand(use, short string, globals *GlobalFlags, kind api.TokenKind, pathFormat string) *cobra.Command {
+// multiGetCommand replaces the old single-only getCommand: it accepts 1..N IDs
+// and routes each through getEntities, yielding the family get contract (NDJSON
+// by default; one record or {"@unresolved":…} per input ID in order).
+func multiGetCommand(use, short string, globals *GlobalFlags, kind api.TokenKind, pathFormat string) *cobra.Command {
+	return &cobra.Command{
+		Use:   use,
+		Short: short + " (one or more IDs)",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return getEntities(cmd.Context(), globals, kind, args, pathFormat)
+		},
+	}
+}
+
+// getEntities runs the family's multi-capable get for the postmark domain: it
+// sets up one client, then resolves each id through the Postmark API and
+// streams the result per the shared get contract (NDJSON by default — one
+// record or {"@unresolved":…} per id in input order; item-level misses, such
+// as 404s, stay on stdout; command-level failures bubble to the single sink).
+func getEntities(cmdCtx context.Context, globals *GlobalFlags, kind api.TokenKind, args []string, pathFormat string) error {
+	resolved, err := resolve(globals)
+	if err != nil {
+		return err
+	}
+	ctx := cmdCtx
+	return libcli.EntityGet(os.Stdout, globals.Format, args, func(id string) (any, error) {
+		raw, err := resolved.Client.Get(ctx, kind, fmt.Sprintf(pathFormat, id), url.Values{})
+		if err != nil {
+			return nil, err
+		}
+		var decoded any
+		if err := json.Unmarshal(raw, &decoded); err != nil {
+			return nil, err
+		}
+		return decoded, nil
+	})
+}
+
+// singleGetCommand is the old single-ID-only variant; used for non-entity
+// fetches (dump, inbound-retry, etc.) where multi-get semantics are not wanted.
+func singleGetCommand(use, short string, globals *GlobalFlags, kind api.TokenKind, pathFormat string) *cobra.Command {
 	return &cobra.Command{
 		Use:   use,
 		Short: short,
