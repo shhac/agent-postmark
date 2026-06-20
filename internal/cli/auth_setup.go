@@ -41,7 +41,7 @@ func registerAuthSetup(parent *cobra.Command) {
 			if form && wantAccount && accountToken == "" {
 				filled, err := promptSecret(cmd.Context(), "agent-postmark: "+profileAlias, "Postmark account token", "")
 				if err != nil {
-					writeProfileHumanError(err, "Run this command in a local graphical session, or omit --form and provide --account-token-value in a human-controlled terminal.")
+					writeProfileDialogError(err, "Run this command in a local graphical session, or omit --form and provide --account-token-value in a human-controlled terminal.")
 					return nil
 				}
 				accountToken = filled
@@ -54,7 +54,7 @@ func registerAuthSetup(parent *cobra.Command) {
 				if form && specs[i].Token == "" {
 					filled, err := promptSecret(cmd.Context(), "agent-postmark: "+profileAlias+"/"+specs[i].Alias, "Postmark server token", "")
 					if err != nil {
-						writeProfileHumanError(err, "Run this command in a local graphical session, or omit --form and provide --server-token-value <server>=<token> in a human-controlled terminal.")
+						writeProfileDialogError(err, "Run this command in a local graphical session, or omit --form and provide --server-token-value <server>=<token> in a human-controlled terminal.")
 						return nil
 					}
 					specs[i].Token = filled

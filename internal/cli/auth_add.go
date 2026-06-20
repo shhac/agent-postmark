@@ -22,7 +22,7 @@ func registerAuthAdd(parent *cobra.Command) {
 				if wantAccount && accountToken == "" {
 					accountToken, err = promptSecret(cmd.Context(), "agent-postmark: "+alias, "Postmark account token", "")
 					if err != nil {
-						writeProfileHumanError(err, "Run this command in a local graphical session, or omit --form and provide --account-token-value in a human-controlled terminal.")
+						writeProfileDialogError(err, "Run this command in a local graphical session, or omit --form and provide --account-token-value in a human-controlled terminal.")
 						return nil
 					}
 				}
