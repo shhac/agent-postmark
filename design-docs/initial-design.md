@@ -134,7 +134,7 @@ Postmark-native env aliases, then built-in defaults.
 Default formats:
 
 - list/search/investigation streams: NDJSON (`jsonl`)
-- single resources: JSON
+- entity gets (`get <id>...`): NDJSON by default (one line per id; was pretty JSON for single-id before Phase 4); pass `--format json` for object/envelope
 - `--format yaml` allowed for human inspection
 - structured errors on stderr
 

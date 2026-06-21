@@ -31,7 +31,7 @@ func registerUsage(root *cobra.Command) {
 					"agent-postmark messages search --to user@example.com --fromdate 2026-05-01T00:00:00",
 					"agent-postmark bounces list --email user@example.com --count 20",
 					"agent-postmark suppressions check user@example.com",
-					"agent-postmark messages get <message-id>",
+					"agent-postmark messages get <message-id> [message-id...]",
 					"agent-postmark investigate delivery --email user@example.com",
 				},
 				"server_token_workflows": []string{
@@ -55,9 +55,16 @@ func registerUsage(root *cobra.Command) {
 					"agent-postmark messages inbound-retry <message-id> --yes",
 					"agent-postmark messages inbound-bypass <message-id> --yes",
 				},
+				"get_contract": []string{
+					"get <id>... accepts one or more ids; returns one result per id in input order (NDJSON by default).",
+					"Each line is the record, or {\"@unresolved\":{\"id\",\"reason\",\"fixable_by\",\"hint\"?}} for a miss.",
+					"--format json|yaml collapses to one {\"data\":[...],\"@unresolved\":[...]} envelope.",
+					"Item-level misses (not found) stay on stdout; exit 0. Command-level failures go to stderr; exit 1.",
+					"Single get <id> is the one-element case: NDJSON one line by default (was pretty JSON before; pass --format json for object).",
+				},
 				"safety": []string{
 					"Secrets are stored in Keychain and never printed.",
-					"Lists default to NDJSON; single resources default to JSON.",
+					"Gets default to NDJSON; pass --format json for a pretty object.",
 					"List output omits bulky bodies, headers, and attachments by default.",
 					"Message subject and addressing fields are visible for delivery triage.",
 					"Tokens, secrets, URL credentials, and original raw email blobs are redacted by default.",

@@ -68,8 +68,20 @@ For local testing, run `mockpostmark` and set `AGENT_POSTMARK_BASE_URL`.
 
 ## Output
 
-Lists and investigations default to NDJSON. Single resources default to JSON.
-Errors are JSON on stderr with `error`, `fixable_by`, and usually `hint`.
+Lists and investigations default to NDJSON. Gets default to NDJSON (one line
+per id). Pass `--format json` for a single pretty object, or `--format yaml`
+for YAML. Errors are JSON on stderr with `error`, `fixable_by`, and usually
+`hint`.
+
+**Get (single + multi).** `get <id>...` takes one or more ids and returns one
+result per id, in input order. Default output is NDJSON: one line per id —
+the record, or `{"@unresolved":{"id","reason","fixable_by","hint"?}}` for an id
+that couldn't be resolved (e.g. not found / bad id). `--format json|yaml`
+collapses to one `{"data":[…], "@unresolved":[…]}` envelope. A single
+`get <id>` is just the one-element case (NDJSON one line by default; was pretty
+JSON before — pass `--format json` for the object). Item-level misses stay on
+stdout and exit 0; only a command-level failure (auth, network) goes to stderr
+with exit 1 and empty stdout.
 
 Subjects and addressing fields are visible for delivery triage. List output
 omits bulky bodies, headers, and attachments by default; use

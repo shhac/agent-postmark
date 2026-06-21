@@ -25,39 +25,44 @@ agent-postmark auth list
 
 ```bash
 agent-postmark servers list
-agent-postmark servers get <server-id>
+agent-postmark servers get <server-id> [server-id...]
 agent-postmark domains list
-agent-postmark domains get <domain-id>
+agent-postmark domains get <domain-id> [domain-id...]
 agent-postmark domains verify-dkim <domain-id> --yes
 agent-postmark domains verify-spf <domain-id> --yes
 agent-postmark signatures list
-agent-postmark signatures get <signature-id>
+agent-postmark signatures get <signature-id> [signature-id...]
 ```
 
 ## Server-token commands
 
 ```bash
 agent-postmark --server <server-alias> streams list
-agent-postmark --server <server-alias> streams get <stream-id>
+agent-postmark --server <server-alias> streams get <stream-id> [stream-id...]
 agent-postmark messages search --to user@example.com --stream outbound
 agent-postmark messages inbound-search --from reply@example.com
-agent-postmark messages get <message-id>
+agent-postmark messages get <message-id> [message-id...]
 agent-postmark messages content <message-id> [message-id...]
 agent-postmark messages dump <message-id>
-agent-postmark messages inbound-get <message-id>
+agent-postmark messages inbound-get <message-id> [message-id...]
 agent-postmark messages opens --count 20
 agent-postmark messages opens --message-id <message-id>
 agent-postmark messages clicks --count 20
 agent-postmark messages clicks --message-id <message-id>
 agent-postmark bounces list --email user@example.com
-agent-postmark bounces get <bounce-id>
+agent-postmark bounces get <bounce-id> [bounce-id...]
 agent-postmark bounces dump <bounce-id>
 agent-postmark suppressions list --stream outbound
 agent-postmark suppressions check user@example.com
 agent-postmark webhooks list
+agent-postmark webhooks get <webhook-id> [webhook-id...]
 agent-postmark webhooks health
 agent-postmark stats delivery
 ```
+
+Entity gets default to NDJSON (one line per id). A missing id yields an
+`{"@unresolved":{…}}` line on stdout (exit 0); auth/network failures go to
+stderr (exit 1). Pass `--format json` for a pretty object or envelope.
 
 Use `suppressions list` for paginated reads. Do not use Postmark's raw
 `/suppressions/dump` endpoint for routine agent workflows; it can return a full

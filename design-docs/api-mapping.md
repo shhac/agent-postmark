@@ -28,32 +28,32 @@ Sources:
 | CLI command | Method/path | Output |
 | --- | --- | --- |
 | `servers list` | `GET /servers?count=&offset=` | NDJSON rows from `Servers`; pagination meta from `TotalCount`. |
-| `servers get <id>` | `GET /servers/{id}` | Redacted JSON. |
+| `servers get <id> [id...]` | `GET /servers/{id}` per id | NDJSON by default; one record or `{"@unresolved":{…}}` per id in order. Pass `--format json` for object/envelope. |
 | `streams list` | `GET /message-streams` | Uses the selected profile server token; NDJSON rows from `MessageStreams`. |
-| `streams get <id>` | `GET /message-streams/{id}` | Redacted JSON. |
+| `streams get <id> [id...]` | `GET /message-streams/{id}` per id | NDJSON by default; multi-get contract. |
 | `domains list` | `GET /domains?count=&offset=` | NDJSON rows from `Domains`. |
-| `domains get <id>` | `GET /domains/{id}` | Redacted JSON. |
+| `domains get <id> [id...]` | `GET /domains/{id}` per id | NDJSON by default; multi-get contract. |
 | `domains verify-dkim <id>` | `POST /domains/{id}/verifyDkim` | JSON result. |
 | `domains verify-spf <id>` | `POST /domains/{id}/verifySPF` | JSON result. |
 | `signatures list` | `GET /senders?count=&offset=` | NDJSON rows from `SenderSignatures`. |
-| `signatures get <id>` | `GET /senders/{id}` | Redacted JSON. |
+| `signatures get <id> [id...]` | `GET /senders/{id}` per id | NDJSON by default; multi-get contract. |
 | `webhooks list` | `GET /webhooks` | NDJSON rows from `Webhooks`. |
-| `webhooks get <id>` | `GET /webhooks/{id}` | Redacted JSON. |
+| `webhooks get <id> [id...]` | `GET /webhooks/{id}` per id | NDJSON by default; multi-get contract. |
 | `messages search` | `GET /messages/outbound` | NDJSON rows from `Messages`. |
 | `messages inbound-search` | `GET /messages/inbound` | NDJSON rows from `InboundMessages`. |
 | `messages opens` | `GET /messages/outbound/opens` | NDJSON rows from `Opens`. |
 | `messages opens --message-id <id>` | `GET /messages/outbound/opens/{id}` | NDJSON rows from `Opens`. |
 | `messages clicks` | `GET /messages/outbound/clicks` | NDJSON rows from `Clicks`. |
 | `messages clicks --message-id <id>` | `GET /messages/outbound/clicks/{id}` | NDJSON rows from `Clicks`. |
-| `messages get <id>` | `GET /messages/outbound/{id}/details` | JSON with secrets redacted. |
+| `messages get <id> [id...]` | `GET /messages/outbound/{id}/details` per id | NDJSON by default; multi-get contract. Secrets redacted. |
 | `messages content <id> [id...]` | `GET /messages/outbound/{id}/details` | One ID defaults to JSON; multiple IDs default to NDJSON. Bodies, headers, attachments, subject, and addressing are visible; secrets are still redacted. |
-| `messages dump <id>` | `GET /messages/outbound/{id}/dump` | JSON with secrets redacted. |
-| `messages inbound-get <id>` | `GET /messages/inbound/{id}/details` | JSON with secrets redacted. |
+| `messages dump <id>` | `GET /messages/outbound/{id}/dump` | JSON (single; not multi-get). Secrets redacted. |
+| `messages inbound-get <id> [id...]` | `GET /messages/inbound/{id}/details` per id | NDJSON by default; multi-get contract. Secrets redacted. |
 | `messages inbound-retry <id> --yes` | `PUT /messages/inbound/{id}/retry` | Guarded mutation. |
 | `messages inbound-bypass <id> --yes` | `PUT /messages/inbound/{id}/bypass` | Guarded mutation. |
 | `bounces list` | `GET /bounces` | NDJSON rows from `Bounces`. |
-| `bounces get <id>` | `GET /bounces/{id}` | JSON with secrets redacted. |
-| `bounces dump <id>` | `GET /bounces/{id}/dump` | JSON with secrets redacted. |
+| `bounces get <id> [id...]` | `GET /bounces/{id}` per id | NDJSON by default; multi-get contract. Secrets redacted. |
+| `bounces dump <id>` | `GET /bounces/{id}/dump` | JSON (single; not multi-get). Secrets redacted. |
 | `bounces activate <id> --yes` | `PUT /bounces/{id}/activate` | Guarded mutation. |
 | `suppressions list` | `GET /message-streams/{stream}/suppressions/list` | NDJSON rows from `Suppressions`; Postmark returns `TotalCount` and honors `count`/`offset`. |
 | `suppressions check <email>` | `GET /message-streams/{stream}/suppressions/list?EmailAddress=...` | NDJSON rows from `Suppressions`. |
@@ -90,7 +90,8 @@ The CLI separates compacting from redaction:
   headers, and attachments unless `--full` is requested
 - delivery triage fields such as `Subject`, `From`, `To`, `Cc`, `Bcc`,
   `ReplyTo`, `Email`, and `EmailAddress` are visible by default
-- single-resource commands can show bodies, headers, attachments, and metadata
+- entity get commands (`servers/streams/domains/signatures/webhooks/bounces/messages get` and `messages inbound-get`) accept 1..N ids; default NDJSON one line per id or `{"@unresolved":{…}}` for a miss; item misses → stdout exit 0; command failures → stderr exit 1; `--format json|yaml` collapses to `{"data":[…],"@unresolved":[…]}` envelope
+- single-resource commands (dump, api get) stay single-id JSON
 - `messages content <id> [id...]` is the explicit command for retrieving full
   outbound email content from one or more message IDs
 - fields named like tokens or secrets, URL credentials, and Postmark

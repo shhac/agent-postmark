@@ -10,7 +10,7 @@ error hints, and no access to Postmark account or server tokens.
 - Postmark-aware scope model: profiles can hold an optional account token and
   multiple server-token contexts, each with its own default stream.
 - `profiles` primary command with hidden `auth` alias for sibling CLI familiarity.
-- LLM-shaped output: lists default to NDJSON, single resources default to JSON.
+- LLM-shaped output: lists and entity gets default to NDJSON; pass `--format json` for a pretty object.
 - Structured errors: stderr JSON includes `fixable_by: agent|human|retry`.
 - Delivery metadata is visible by default: subject and addressing fields are
   available for triage, while list output omits bulky bodies, headers, and
@@ -33,6 +33,7 @@ make build
 ./agent-postmark servers list
 ./agent-postmark --server app streams list
 ./agent-postmark messages search --to user@example.com --count 20
+./agent-postmark messages get <message-id> [message-id...]
 ./agent-postmark bounces list --email user@example.com
 ./agent-postmark suppressions check user@example.com
 ./agent-postmark webhooks health

@@ -6,9 +6,23 @@ guards. For command selection, use `scenarios.md` or `investigations.md`.
 ## Formats
 
 - Lists default to NDJSON (`jsonl`).
-- Single resources default to JSON.
+- Gets (`get <id>...`) default to NDJSON — one line per id.
 - Investigations always emit NDJSON evidence records.
-- `--format yaml` is available for humans on most non-investigation commands.
+- `--format json` gives a pretty object (or `{"data":[…],"@unresolved":[…]}`
+  envelope for multi-get). `--format yaml` is available for humans on most
+  non-investigation commands.
+
+## Get Contract (single + multi)
+
+`get <id>...` takes one or more ids and returns one result per id, in input
+order. Default output is NDJSON: one line per id — the record, or
+`{"@unresolved":{"id","reason","fixable_by","hint"?}}` for an id that couldn't
+be resolved (e.g. not found / bad id). `--format json|yaml` collapses to one
+`{"data":[…], "@unresolved":[…]}` envelope. A single `get <id>` is just the
+one-element case (NDJSON one line by default; was pretty JSON before — pass
+`--format json` for the object). Item-level misses stay on stdout and exit 0;
+only a command-level failure (auth, network) goes to stderr with exit 1 and
+empty stdout.
 
 ## Evidence Records
 
