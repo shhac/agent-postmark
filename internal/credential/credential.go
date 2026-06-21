@@ -43,7 +43,8 @@ func Store(name string, kind TokenKind, token string) (string, error) {
 }
 
 func StoreAccount(profile string, token string) (string, error) {
-	if err := keychainStore(accountKeychainName(profile), token); err != nil {
+	storage, err := storeSecret(accountKeychainName(profile), token)
+	if err != nil {
 		return "", err
 	}
 	index, err := readIndex()
@@ -56,11 +57,12 @@ func StoreAccount(profile string, token string) (string, error) {
 	if err := writeIndex(index); err != nil {
 		return "", err
 	}
-	return "keychain", nil
+	return storage, nil
 }
 
 func StoreServer(profile, server string, token string) (string, error) {
-	if err := keychainStore(serverKeychainName(profile, server), token); err != nil {
+	storage, err := storeSecret(serverKeychainName(profile, server), token)
+	if err != nil {
 		return "", err
 	}
 	index, err := readIndex()
@@ -79,7 +81,7 @@ func StoreServer(profile, server string, token string) (string, error) {
 	if err := writeIndex(index); err != nil {
 		return "", err
 	}
-	return "keychain", nil
+	return storage, nil
 }
 
 func Get(name string, kind TokenKind) (string, error) {
@@ -102,7 +104,7 @@ func GetAccount(profile string) (string, error) {
 	if !ok || !current.AccountToken {
 		return "", &NotFoundError{Name: profile, Kind: AccountToken}
 	}
-	return keychainGet(accountKeychainName(profile))
+	return getSecret(accountKeychainName(profile))
 }
 
 func GetServer(profile, server string) (string, error) {
@@ -116,7 +118,7 @@ func GetServer(profile, server string) (string, error) {
 	if !hasServer && !hasLegacyDefault {
 		return "", &NotFoundError{Name: profile + "/server/" + server, Kind: ServerToken}
 	}
-	token, err := keychainGet(serverKeychainName(profile, server))
+	token, err := getSecret(serverKeychainName(profile, server))
 	if err != nil && server != "default" {
 		return "", &NotFoundError{Name: profile + "/server/" + server, Kind: ServerToken}
 	}
@@ -133,13 +135,13 @@ func Remove(name string) error {
 		return &NotFoundError{Name: name}
 	}
 	if current.AccountToken {
-		_ = keychainDelete(accountKeychainName(name))
+		deleteSecret(accountKeychainName(name))
 	}
 	if current.ServerToken {
-		_ = keychainDelete(serverKeychainName(name, "default"))
+		deleteSecret(serverKeychainName(name, "default"))
 	}
 	for server := range current.Servers {
-		_ = keychainDelete(serverKeychainName(name, server))
+		deleteSecret(serverKeychainName(name, server))
 	}
 	delete(index, name)
 	return writeIndex(index)
@@ -156,7 +158,7 @@ func RemoveServer(profile, server string) error {
 	if !hasServer && !hasLegacyDefault {
 		return &NotFoundError{Name: profile + "/server/" + server, Kind: ServerToken}
 	}
-	_ = keychainDelete(serverKeychainName(profile, server))
+	deleteSecret(serverKeychainName(profile, server))
 	if current.Servers != nil {
 		delete(current.Servers, server)
 	}
