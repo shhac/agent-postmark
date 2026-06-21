@@ -1,138 +1,42 @@
 ---
-description: Build, release, and publish to Homebrew
+description: Release via tag push — CI builds, publishes, and bumps the Homebrew formula
 argument-hint: <patch|minor|major>
 ---
 
 # Release
 
-Perform a full release of the `agent-postmark` CLI: version bump, tag, build,
-GitHub release, and Homebrew tap update.
+Releasing `agent-postmark` is automated. Pushing a `v*` tag triggers
+`.github/workflows/release.yml`, which calls the shared `go-release` workflow in
+`shhac/homebrew-tap` to cross-build every platform, publish the GitHub Release,
+and regenerate + push `Formula/agent-postmark.rb` (with shell completions) to the tap.
+**No manual build, and no manual formula bump.**
 
-## Arguments
+## Steps
 
-- `$ARGUMENTS` - version bump type: `patch`, `minor`, or `major`
-
-## Instructions
-
-You are performing a release of the `agent-postmark` CLI (Go version). Follow
-these steps exactly.
-
-### Pre-flight
-
-1. Confirm `$ARGUMENTS` is exactly `patch`, `minor`, or `major`. If not, stop and ask.
-2. Confirm the working tree is clean:
+1. `$ARGUMENTS` must be `patch`, `minor`, or `major` — else stop and ask.
+2. Pre-flight (CI re-runs tests on the tag, but check locally first):
+   - Clean tree (`git status --short`), on `main`, up to date with `origin/main`.
+   - Tests, vet, and lint pass (e.g. `make test` / `go test ./...`, `go vet ./...`,
+     `make lint` / `golangci-lint run ./...`). The version is injected from the tag
+     (`-ldflags -X main.version=…`) — there is no version file to edit.
+3. Compute the new version by bumping the latest tag
+   (`git describe --tags --abbrev=0`): patch → x.y.(z+1), minor → x.(y+1).0,
+   major → (x+1).0.0.
+4. Tag and push — this is the whole release:
    ```bash
-   git status --short
+   git tag "v${new_version}"
+   git push origin "v${new_version}"
    ```
-   If there are changes, stop and ask.
-3. Confirm the current branch is `main` and it is up to date with `origin/main`.
-4. Run:
+5. Verify CI and the outputs:
    ```bash
-   make test
-   go vet ./...
-   AGENT_POSTMARK_RUN_SUBPROCESS_E2E=1 go test ./internal/cli -run SubprocessE2E -count=1
+   gh run watch --repo shhac/agent-postmark          # both jobs green: build+release, homebrew tap
+   gh release view "v${new_version}" --repo shhac/agent-postmark   # 6 assets
    ```
-   If any command fails, stop and fix.
-5. Determine the current version from the latest git tag:
-   ```bash
-   current=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
-   ```
+   Install / upgrade: `brew install shhac/tap/agent-postmark` · `brew upgrade shhac/tap/agent-postmark`
 
-### Step 1: Version bump, tag, and push
+## Manual fallback (only if the workflow itself is broken)
 
-Calculate the next version:
-
-```bash
-current=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
-IFS='.' read -r major minor patch <<< "$current"
-
-case "$ARGUMENTS" in
-  patch) patch=$((patch + 1)) ;;
-  minor) minor=$((minor + 1)); patch=0 ;;
-  major) major=$((major + 1)); minor=0; patch=0 ;;
-  *) echo "expected patch, minor, or major"; exit 1 ;;
-esac
-
-new_version="${major}.${minor}.${patch}"
-echo "Releasing v${new_version}"
-```
-
-Then tag and push:
-
-```bash
-git tag "v${new_version}"
-git push origin main "v${new_version}"
-```
-
-### Step 2: Build manually
-
-Releases for this repo are manual. Do not use GoReleaser for `agent-postmark`.
-
-```bash
-rm -rf dist/
-mkdir -p dist
-GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w -X main.version=${new_version}" -o "dist/agent-postmark-darwin-arm64" ./cmd/agent-postmark
-GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w -X main.version=${new_version}" -o "dist/agent-postmark-darwin-amd64" ./cmd/agent-postmark
-GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -X main.version=${new_version}" -o "dist/agent-postmark-linux-amd64" ./cmd/agent-postmark
-GOOS=linux GOARCH=arm64 go build -ldflags="-s -w -X main.version=${new_version}" -o "dist/agent-postmark-linux-arm64" ./cmd/agent-postmark
-GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -X main.version=${new_version}" -o "dist/agent-postmark-windows-amd64.exe" ./cmd/agent-postmark
-
-cd dist
-for bin in agent-postmark-darwin-arm64 agent-postmark-darwin-amd64 agent-postmark-linux-amd64 agent-postmark-linux-arm64; do
-  tar czf "${bin}.tar.gz" "$bin"
-done
-zip agent-postmark-windows-amd64.zip agent-postmark-windows-amd64.exe
-shasum -a 256 *.tar.gz *.zip > checksums-sha256.txt
-cd ..
-```
-
-Smoke-test the native binary:
-
-```bash
-./dist/agent-postmark-darwin-arm64 --version
-./dist/agent-postmark-darwin-arm64 usage
-```
-
-### Step 3: Create GitHub release manually
-
-```bash
-prev_tag=$(git tag --sort=-v:refname | head -2 | tail -1)
-notes=$(git log --pretty=format:"- %s" "${prev_tag}..v${new_version}" --no-merges | grep -v "^- v[0-9]" || true)
-
-gh release create "v${new_version}" dist/*.tar.gz dist/*.zip dist/checksums-sha256.txt \
-  --title "v${new_version}" \
-  --notes "$notes"
-```
-
-### Step 4: Update Homebrew tap
-
-The Homebrew formula lives in `../homebrew-tap` relative to this repo root.
-Create or update `../homebrew-tap/Formula/agent-postmark.rb` using the sibling
-agent formula pattern, with:
-
-- Class name: `AgentPostmark`
-- desc: `"Postmark delivery triage CLI for AI agents"`
-- homepage: `https://github.com/shhac/agent-postmark`
-- version, URLs, and SHA256 values from `dist/checksums-sha256.txt`
-- test assertions for `agent-postmark --version` and `agent-postmark usage`
-
-Then commit and push the tap:
-
-```bash
-cd ../homebrew-tap
-git status --short
-git hunk add --all --file Formula/agent-postmark.rb
-git commit -m "agent-postmark ${new_version}"
-git push
-cd -
-```
-
-### Step 5: Report
-
-Show the user:
-
-- New version number
-- GitHub release URL
-- Homebrew tap commit, if applicable
-- `brew install shhac/tap/agent-postmark`
-- `brew upgrade shhac/tap/agent-postmark`
+Re-run a failed release with `gh run rerun <id> --repo shhac/agent-postmark`. To bypass
+the workflow entirely, build the `GOOS/GOARCH` binaries with
+`-ldflags "-s -w -X main.version=<v>"`, `gh release create` the tarballs, and edit
+`Formula/agent-postmark.rb` by hand (see this file's git history for the old full flow).
