@@ -92,6 +92,7 @@ func applyConfiguredDefaults(cmd *cobra.Command, globals *GlobalFlags) {
 	if cfg.Defaults.MaxRetries != nil && !flags.Changed("max-retries") {
 		globals.MaxRetries = *cfg.Defaults.MaxRetries
 	}
+	SetExpose(globals.Expose)
 }
 
 // NewRootCmd builds the root command after applying the auth→profiles alias

@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/url"
-	"sort"
 	"strings"
+
+	out "github.com/shhac/lib-agent-output"
 )
 
 var sensitiveKeys = map[string]bool{
@@ -20,24 +21,44 @@ var safeTokenMetadataKeys = map[string]bool{
 	"server_tokens_configured": true,
 }
 
+// redactExpose is the --expose allowlist, set once from the global flag.
+var redactExpose []string
+
+// SetExpose records the --expose allowlist used by redaction (the global
+// --expose flag, wired from the root command's defaults hook).
+func SetExpose(expose []string) { redactExpose = expose }
+
+// redactRaw masks agent-postmark's sensitive fields in a raw JSON document.
+//
+// The shared out.Redact owns the field-masking MECHANISM (the walk, the
+// [REDACTED] placeholder, the @redacted notes, and --expose handling);
+// postmarkSecrets() is the local POLICY (which keys/values are secret).
+//
+// URL userinfo (https://user:pass@host/…) is a PARTIAL-value transform that the
+// shared whole-value redactor deliberately does not own, so it stays here as a
+// local pass layered after field masking — it only touches values a sensitive
+// key has not already fully masked, preserving "key sensitivity wins".
 func redactRaw(raw json.RawMessage) json.RawMessage {
 	var decoded any
 	if err := json.Unmarshal(raw, &decoded); err != nil {
 		return raw
 	}
-	redacted, paths := redactValue(decoded, "")
-	if len(paths) > 0 {
-		sort.Strings(paths)
-		paths = uniqueStrings(paths)
-		if m, ok := redacted.(map[string]any); ok {
-			m["@redacted"] = paths
-		}
-	}
-	out, err := marshalJSONNoEscape(redacted)
+	redacted := out.Redact(decoded, postmarkSecrets(), redactExpose)
+	redacted = maskURLUserinfo(redacted)
+	result, err := marshalJSONNoEscape(redacted)
 	if err != nil {
 		return raw
 	}
-	return out
+	return result
+}
+
+// postmarkSecrets is agent-postmark's redaction POLICY: mask token/secret-named
+// fields (with the documented safe-shape exceptions for *_configured presence
+// metadata) and the OriginalEmail field.
+func postmarkSecrets() out.RedactRule {
+	return func(_, key string, value any, _ map[string]any) bool {
+		return shouldRedact(key, value)
+	}
 }
 
 func marshalJSONNoEscape(v any) ([]byte, error) {
@@ -50,43 +71,65 @@ func marshalJSONNoEscape(v any) ([]byte, error) {
 	return bytes.TrimSuffix(buf.Bytes(), []byte("\n")), nil
 }
 
-func redactValue(v any, path string) (any, []string) {
-	switch val := v.(type) {
-	case map[string]any:
-		out := make(map[string]any, len(val))
-		var paths []string
-		for k, child := range val {
-			nextPath := k
-			if path != "" {
-				nextPath = path + "." + k
-			}
-			if shouldRedact(k, child) {
-				out[k] = "[REDACTED]"
-				paths = append(paths, nextPath)
-				continue
-			}
-			if redacted, ok := redactURLUserinfo(child); ok {
-				out[k] = redacted
-				paths = append(paths, nextPath)
-				continue
-			}
-			redacted, childPaths := redactValue(child, nextPath)
-			out[k] = redacted
-			paths = append(paths, childPaths...)
-		}
-		return out, paths
-	case []any:
-		out := make([]any, len(val))
-		var paths []string
-		for i, child := range val {
-			redacted, childPaths := redactValue(child, path)
-			out[i] = redacted
-			paths = append(paths, childPaths...)
-		}
-		return out, paths
-	default:
-		return v, nil
+// maskURLUserinfo walks the (already field-redacted) tree and rewrites any URL
+// string carrying userinfo to https://[REDACTED]@host/…, recording each masked
+// path in the @redacted note list. Values a sensitive key already masked are the
+// literal placeholder, which is not a URL, so they are left untouched.
+func maskURLUserinfo(value any) any {
+	masked, notes := maskURLUserinfoWalk(value, "")
+	if len(notes) == 0 {
+		return masked
 	}
+	m, ok := masked.(map[string]any)
+	if !ok {
+		return masked
+	}
+	if existing, ok := m[out.MetaKeyRedacted].([]out.RedactionNote); ok {
+		m[out.MetaKeyRedacted] = append(existing, notes...)
+		return m
+	}
+	m[out.MetaKeyRedacted] = notes
+	return m
+}
+
+func maskURLUserinfoWalk(value any, path string) (any, []out.RedactionNote) {
+	switch val := value.(type) {
+	case map[string]any:
+		var notes []out.RedactionNote
+		for key, child := range val {
+			if key == out.MetaKeyRedacted {
+				continue
+			}
+			childPath := joinRedactPath(path, key)
+			if masked, ok := redactURLUserinfo(child); ok {
+				val[key] = masked
+				notes = append(notes, out.RedactionNote{Path: childPath, Reason: "url_userinfo"})
+				continue
+			}
+			redacted, childNotes := maskURLUserinfoWalk(child, childPath)
+			val[key] = redacted
+			notes = append(notes, childNotes...)
+		}
+		return val, notes
+	case []any:
+		var notes []out.RedactionNote
+		itemPath := path + "[]"
+		for i, child := range val {
+			redacted, childNotes := maskURLUserinfoWalk(child, itemPath)
+			val[i] = redacted
+			notes = append(notes, childNotes...)
+		}
+		return val, notes
+	default:
+		return value, nil
+	}
+}
+
+func joinRedactPath(base, key string) string {
+	if base == "" {
+		return key
+	}
+	return base + "." + key
 }
 
 func redactURLUserinfo(value any) (string, bool) {
@@ -98,18 +141,18 @@ func redactURLUserinfo(value any) (string, bool) {
 	if err != nil || parsed.User == nil || parsed.Scheme == "" || parsed.Host == "" {
 		return "", false
 	}
-	out := parsed.Scheme + "://[REDACTED]@" + parsed.Host
+	masked := parsed.Scheme + "://[REDACTED]@" + parsed.Host
 	if parsed.Opaque != "" {
-		out += parsed.Opaque
+		masked += parsed.Opaque
 	}
-	out += parsed.EscapedPath()
+	masked += parsed.EscapedPath()
 	if parsed.RawQuery != "" {
-		out += "?" + parsed.RawQuery
+		masked += "?" + parsed.RawQuery
 	}
 	if parsed.Fragment != "" {
-		out += "#" + parsed.EscapedFragment()
+		masked += "#" + parsed.EscapedFragment()
 	}
-	return out, true
+	return masked, true
 }
 
 func shouldRedact(key string, value any) bool {
@@ -154,17 +197,4 @@ func redactableValue(value any) bool {
 	default:
 		return false
 	}
-}
-
-func uniqueStrings(sorted []string) []string {
-	if len(sorted) < 2 {
-		return sorted
-	}
-	out := sorted[:1]
-	for _, value := range sorted[1:] {
-		if value != out[len(out)-1] {
-			out = append(out, value)
-		}
-	}
-	return out
 }

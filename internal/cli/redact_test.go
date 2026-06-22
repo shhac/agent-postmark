@@ -113,13 +113,18 @@ func TestRedactKeySensitivityWinsOverURLUserinfo(t *testing.T) {
 	}
 }
 
-func TestRedactDeduplicatesArrayPaths(t *testing.T) {
+func TestRedactRecordsArrayElementPaths(t *testing.T) {
 	raw := redactRaw([]byte(`{"Items":[{"ApiToken":"a"},{"ApiToken":"b"}]}`))
 	got := string(raw)
-	if strings.Contains(got, `"a"`) || strings.Contains(got, `"b"`) {
+	if strings.Contains(got, `"ApiToken":"a"`) || strings.Contains(got, `"ApiToken":"b"`) {
 		t.Fatalf("token leaked: %s", got)
 	}
-	if strings.Count(got, "Items.ApiToken") != 1 {
-		t.Fatalf("redacted paths should be deduplicated: %s", got)
+	if strings.Count(got, `"ApiToken":"[REDACTED]"`) != 2 {
+		t.Fatalf("both array element tokens should be redacted: %s", got)
+	}
+	// The shared redactor records one note per masked occurrence, keyed by the
+	// array-element path (a "[]" segment marks the array).
+	if !strings.Contains(got, `"path":"Items[].ApiToken"`) {
+		t.Fatalf("redacted array path not recorded: %s", got)
 	}
 }
