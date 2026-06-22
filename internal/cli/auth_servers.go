@@ -176,15 +176,18 @@ func profileServerListRows(profileAlias string, profile config.Profile) []json.R
 }
 
 func profileServerListRow(profileAlias, serverAlias string, server config.ServerProfile, isDefault, tokenConfigured bool) json.RawMessage {
-	row, _ := json.Marshal(map[string]any{
+	fields := map[string]any{
 		"profile":                 profileAlias,
 		"server":                  serverAlias,
 		"default":                 isDefault,
 		"server_id":               server.ServerID,
 		"message_stream":          server.MessageStream,
-		"credential":              "keychain",
 		"server_token_configured": tokenConfigured,
-	})
+	}
+	if storage := credential.ServerStorage(profileAlias, serverAlias); storage != "" {
+		fields["storage"] = storage
+	}
+	row, _ := json.Marshal(fields)
 	return row
 }
 
@@ -220,14 +223,17 @@ func writeServerProfileResult(status, profileAlias, serverAlias string) error {
 	cfg := config.Read()
 	profile := cfg.Profiles[profileAlias]
 	server := profile.Servers[serverAlias]
-	return writeItem(map[string]any{
+	result := map[string]any{
 		"status":         status,
 		"profile":        profileAlias,
 		"server":         serverAlias,
 		"default":        profile.DefaultServer == serverAlias,
 		"server_id":      server.ServerID,
 		"message_stream": server.MessageStream,
-		"credential":     "keychain",
 		"credentials":    credential.Summary(profileAlias),
-	}, "")
+	}
+	if storage := credential.ServerStorage(profileAlias, serverAlias); storage != "" {
+		result["storage"] = storage
+	}
+	return writeItem(result, "")
 }

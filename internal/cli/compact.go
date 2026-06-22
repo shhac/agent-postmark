@@ -36,9 +36,9 @@ func compactListItem(resource string, raw json.RawMessage, full bool) json.RawMe
 	case "Suppressions":
 		keys = []string{"EmailAddress", "SuppressionReason", "Origin", "CreatedAt", "Status", "Message"}
 	case "Profiles":
-		keys = []string{"profile", "default", "credential", "credentials", "host", "default_server", "servers"}
+		keys = []string{"profile", "default", "storage", "credentials", "host", "default_server", "servers"}
 	case "ProfileServers":
-		keys = []string{"profile", "server", "default", "server_id", "message_stream", "credential", "server_token_configured"}
+		keys = []string{"profile", "server", "default", "server_id", "message_stream", "storage", "server_token_configured"}
 	default:
 		return redactRaw(raw)
 	}

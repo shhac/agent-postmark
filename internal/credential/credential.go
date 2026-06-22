@@ -188,6 +188,53 @@ func Summary(name string) map[string]any {
 	}
 }
 
+// AccountStorage reports where a profile's account token lives: "keychain",
+// "file", or "" when none is stored. Read-only.
+func AccountStorage(profile string) string {
+	return secretBackend(accountKeychainName(profile))
+}
+
+// ServerStorage reports where a profile/server token lives: "keychain", "file",
+// or "" when none is stored. Read-only.
+func ServerStorage(profile, server string) string {
+	return secretBackend(serverKeychainName(profile, server))
+}
+
+// ProfileStorage reports the backend for a profile's credentials as a whole. It
+// returns the account token's backend when present, otherwise the backend of
+// any stored server token, or "" when the profile has no stored secret. When
+// backends differ across a profile's secrets it reports "mixed". Read-only.
+func ProfileStorage(profile string) string {
+	index, err := readIndex()
+	if err != nil {
+		return ""
+	}
+	current := index[profile]
+	backend := ""
+	note := func(b string) {
+		if b == "" {
+			return
+		}
+		if backend == "" {
+			backend = b
+			return
+		}
+		if backend != b {
+			backend = "mixed"
+		}
+	}
+	if current.AccountToken {
+		note(AccountStorage(profile))
+	}
+	if current.ServerToken {
+		note(ServerStorage(profile, "default"))
+	}
+	for server := range current.Servers {
+		note(ServerStorage(profile, server))
+	}
+	return backend
+}
+
 func Type(token string) string {
 	switch token {
 	case "":

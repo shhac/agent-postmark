@@ -67,6 +67,23 @@ func storeSecret(name, token string) (string, error) {
 	return "file", nil
 }
 
+// secretBackend reports where the secret for name lives: "keychain", "file", or
+// "" when no secret is stored under that name. Read-only. The file store is only
+// populated on keychain fallback (storeSecret removes the file copy once the
+// keychain accepts the write), so a name present in the file is file-backed and
+// anything readable from the keychain is keychain-backed.
+func secretBackend(name string) string {
+	if secrets, err := readSecrets(); err == nil {
+		if _, ok := secrets[name]; ok {
+			return "file"
+		}
+	}
+	if _, err := keychainGet(name); err == nil {
+		return "keychain"
+	}
+	return ""
+}
+
 // getSecret reads a token, trying the keychain first, then the secrets file.
 func getSecret(name string) (string, error) {
 	if token, err := keychainGet(name); err == nil {

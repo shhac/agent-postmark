@@ -115,15 +115,18 @@ func profileListRows(cfg *config.Config) []json.RawMessage {
 }
 
 func profileListRow(alias string, profile config.Profile, isDefault bool) json.RawMessage {
-	row, _ := json.Marshal(map[string]any{
+	fields := map[string]any{
 		"profile":        alias,
 		"default":        isDefault,
-		"credential":     "keychain",
 		"credentials":    credential.Summary(alias),
 		"host":           profile.Host,
 		"default_server": profile.DefaultServer,
 		"servers":        profile.Servers,
-	})
+	}
+	if storage := credential.ProfileStorage(alias); storage != "" {
+		fields["storage"] = storage
+	}
+	row, _ := json.Marshal(fields)
 	return row
 }
 

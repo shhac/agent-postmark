@@ -37,6 +37,7 @@ func newRootCmd(version string) *cobra.Command {
 		Short:          "Postmark delivery triage CLI for AI agents",
 		Version:        version,
 		Globals:        &globals.Globals,
+		Redacts:        true,
 		DefaultFormat:  output.FormatNDJSON,
 		ConfigDefaults: func() { applyConfiguredDefaults(root, globals) },
 		UnknownHint:    "run 'agent-postmark usage' to see the available domains",
