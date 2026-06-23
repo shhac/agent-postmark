@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -50,13 +51,22 @@ func resolve(flags *GlobalFlags) (*resolvedContext, error) {
 	cfg := config.Read()
 	profileName := creds.FirstNonEmpty(flags.Profile, os.Getenv("AGENT_POSTMARK_PROFILE"), cfg.DefaultProfile)
 	profile := config.Profile{}
+	profileFound := false
 	if profileName != "" {
 		if found, ok := cfg.Profiles[profileName]; ok {
 			profile = found
+			profileFound = true
 		}
 	}
 
 	host := creds.FirstNonEmpty(flags.Host, os.Getenv("AGENT_POSTMARK_BASE_URL"), profile.Host, os.Getenv("AGENT_POSTMARK_HOST"), config.DefaultHost)
+	requestedServer := creds.FirstNonEmpty(flags.Server, os.Getenv("AGENT_POSTMARK_SERVER"))
+	directServerToken := creds.FirstNonEmpty(flags.ServerToken, os.Getenv("AGENT_POSTMARK_SERVER_TOKEN"), os.Getenv("POSTMARK_SERVER_TOKEN")) != ""
+	if requestedServer != "" && profileFound && !directServerToken {
+		if _, ok := profile.Servers[requestedServer]; !ok {
+			return nil, unknownServerError(profileName, requestedServer, profile.Servers)
+		}
+	}
 	serverAlias := creds.FirstNonEmpty(flags.Server, os.Getenv("AGENT_POSTMARK_SERVER"), profile.DefaultServer)
 	if serverAlias == "" && len(profile.Servers) == 1 {
 		for alias := range profile.Servers {
@@ -103,6 +113,21 @@ func resolve(flags *GlobalFlags) (*resolvedContext, error) {
 		AccountToken:  accountStored,
 		ServerToken:   serverStored,
 	}, nil
+}
+
+func unknownServerError(profileName, requested string, servers map[string]config.ServerProfile) error {
+	aliases := make([]string, 0, len(servers))
+	for alias := range servers {
+		aliases = append(aliases, alias)
+	}
+	sort.Strings(aliases)
+
+	err := agenterrors.Newf(agenterrors.FixableByAgent, "unknown server %q for profile %q", requested, profileName)
+	if len(aliases) == 0 {
+		return err.WithHint("This profile has no configured servers. Add one with 'agent-postmark profiles servers add <profile> <server> --form --server-token --server-id <id>'.")
+	}
+	return err.WithHint("Pass --server with one of the configured aliases: " + strings.Join(aliases, ", ") +
+		". List them with 'agent-postmark profiles servers list " + profileName + "'.")
 }
 
 func writeItem(data any, flagFormat string) error {
