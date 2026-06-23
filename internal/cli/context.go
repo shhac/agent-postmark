@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/url"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -61,13 +60,7 @@ func resolve(flags *GlobalFlags) (*resolvedContext, error) {
 
 	host := creds.FirstNonEmpty(flags.Host, os.Getenv("AGENT_POSTMARK_BASE_URL"), profile.Host, os.Getenv("AGENT_POSTMARK_HOST"), config.DefaultHost)
 	requestedServer := creds.FirstNonEmpty(flags.Server, os.Getenv("AGENT_POSTMARK_SERVER"))
-	directServerToken := creds.FirstNonEmpty(flags.ServerToken, os.Getenv("AGENT_POSTMARK_SERVER_TOKEN"), os.Getenv("POSTMARK_SERVER_TOKEN")) != ""
-	if requestedServer != "" && profileFound && !directServerToken {
-		if _, ok := profile.Servers[requestedServer]; !ok {
-			return nil, unknownServerError(profileName, requestedServer, profile.Servers)
-		}
-	}
-	serverAlias := creds.FirstNonEmpty(flags.Server, os.Getenv("AGENT_POSTMARK_SERVER"), profile.DefaultServer)
+	serverAlias := creds.FirstNonEmpty(requestedServer, profile.DefaultServer)
 	if serverAlias == "" && len(profile.Servers) == 1 {
 		for alias := range profile.Servers {
 			serverAlias = alias
@@ -81,6 +74,14 @@ func resolve(flags *GlobalFlags) (*resolvedContext, error) {
 	serverToken := creds.FirstNonEmpty(flags.ServerToken, os.Getenv("AGENT_POSTMARK_SERVER_TOKEN"), os.Getenv("POSTMARK_SERVER_TOKEN"))
 	accountStored := accountToken != ""
 	serverStored := serverToken != ""
+	// A directly supplied server token (serverStored here predates the keychain
+	// lookup below) makes the alias a free-form label; otherwise it must name a
+	// server configured on the selected profile.
+	if requestedServer != "" && profileFound && !serverStored {
+		if _, ok := profile.Servers[requestedServer]; !ok {
+			return nil, unknownServerError(profileName, requestedServer, profile.Servers)
+		}
+	}
 	if profileName != "" {
 		if accountToken == "" {
 			if token, err := credential.GetAccount(profileName); err == nil {
@@ -116,12 +117,7 @@ func resolve(flags *GlobalFlags) (*resolvedContext, error) {
 }
 
 func unknownServerError(profileName, requested string, servers map[string]config.ServerProfile) error {
-	aliases := make([]string, 0, len(servers))
-	for alias := range servers {
-		aliases = append(aliases, alias)
-	}
-	sort.Strings(aliases)
-
+	aliases := sortedServerAliases(servers)
 	err := agenterrors.Newf(agenterrors.FixableByAgent, "unknown server %q for profile %q", requested, profileName)
 	if len(aliases) == 0 {
 		return err.WithHint("This profile has no configured servers. Add one with 'agent-postmark profiles servers add <profile> <server> --form --server-token --server-id <id>'.")

@@ -45,6 +45,36 @@ func TestResolveUnknownServerNamesConfiguredAliases(t *testing.T) {
 	}
 }
 
+// When the profile has no configured servers at all, the hint must steer the
+// user toward adding one rather than listing aliases that don't exist.
+func TestResolveUnknownServerEmptyProfile(t *testing.T) {
+	config.SetConfigDir(t.TempDir())
+	t.Setenv("AGENT_POSTMARK_SERVER", "")
+	t.Setenv("AGENT_POSTMARK_SERVER_TOKEN", "")
+	t.Setenv("POSTMARK_SERVER_TOKEN", "")
+	if err := config.Write(&config.Config{Profiles: map[string]config.Profile{
+		"acme": {Servers: map[string]config.ServerProfile{}},
+	}}); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	_, err := resolve(&GlobalFlags{Profile: "acme", Server: "staging"})
+	if err == nil {
+		t.Fatal("resolve(--server staging) = nil error, want unknown-server error")
+	}
+
+	var apiErr *agenterrors.APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("error is not an APIError: %v", err)
+	}
+	if apiErr.FixableBy != agenterrors.FixableByAgent {
+		t.Fatalf("fixable_by = %q, want agent", apiErr.FixableBy)
+	}
+	if !strings.Contains(apiErr.Hint, "profiles servers add") {
+		t.Fatalf("hint %q does not steer toward adding a server", apiErr.Hint)
+	}
+}
+
 // A directly supplied --server-token means the alias is just a label, so an
 // unconfigured name must not be rejected.
 func TestResolveUnknownServerAllowedWithDirectToken(t *testing.T) {
