@@ -32,6 +32,7 @@ var (
 	ParseFormat   = out.ParseFormat
 	ResolveFormat = out.ResolveFormat
 	WriteError    = out.WriteError
+	WriteNotice   = out.WriteNotice
 )
 
 var (
