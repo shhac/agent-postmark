@@ -38,7 +38,7 @@ func registerMessages(root *cobra.Command, globals *GlobalFlags) {
 				if err != nil {
 					return err
 				}
-				return writeEnvelopeListWithPage(raw, "Messages", offset, count, globals.Format, globals.Full)
+				return writeStreamScopedList(raw, "Messages", stream, offset, count, globals.Format, globals.Full)
 			})
 		},
 	}

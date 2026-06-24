@@ -40,7 +40,7 @@ func registerBounces(root *cobra.Command, globals *GlobalFlags) {
 				if err != nil {
 					return err
 				}
-				return writeEnvelopeListWithPage(raw, "Bounces", offset, count, globals.Format, globals.Full)
+				return writeStreamScopedList(raw, "Bounces", stream, offset, count, globals.Format, globals.Full)
 			})
 		},
 	}
@@ -76,7 +76,7 @@ func registerSuppressions(root *cobra.Command, globals *GlobalFlags) {
 				if err != nil {
 					return err
 				}
-				return writeEnvelopeListWithPage(raw, "Suppressions", offset, count, globals.Format, globals.Full)
+				return writeStreamScopedList(raw, "Suppressions", stream, offset, count, globals.Format, globals.Full)
 			})
 		},
 	}
@@ -100,7 +100,7 @@ func registerSuppressions(root *cobra.Command, globals *GlobalFlags) {
 				if err != nil {
 					return err
 				}
-				return writeEnvelopeListWithPage(raw, "Suppressions", 0, 10, globals.Format, globals.Full)
+				return writeStreamScopedList(raw, "Suppressions", stream, 0, 10, globals.Format, globals.Full)
 			})
 		},
 	}

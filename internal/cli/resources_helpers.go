@@ -187,6 +187,54 @@ func writeEnvelopeListWithPage(raw json.RawMessage, field string, offset, count 
 	return writeList(items, total, offset, count, field, format, full)
 }
 
+// writeStreamScopedList renders a stream-scoped list (messages, bounces,
+// suppressions) and, when it comes back empty, writes a stderr notice steering
+// the caller toward a different message stream — the usual cause of a miss,
+// since Postmark partitions these records per stream.
+func writeStreamScopedList(raw json.RawMessage, field, stream string, offset, count int, format string, full bool) error {
+	if envelopeListIsEmpty(raw, field) {
+		notice, hint := streamScopedMissNotice(stream)
+		output.WriteNotice(output.Stderr(), notice, hint)
+	}
+	return writeEnvelopeListWithPage(raw, field, offset, count, format, full)
+}
+
+// envelopeListIsEmpty reports whether a Postmark list envelope carries no
+// records, preferring the server's TotalCount and falling back to the length of
+// the list field — the same precedence writeEnvelopeListWithPage renders with.
+func envelopeListIsEmpty(raw json.RawMessage, field string) bool {
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return false
+	}
+	if totalRaw, ok := payload["TotalCount"]; ok {
+		var total int
+		_ = json.Unmarshal(totalRaw, &total)
+		return total == 0
+	}
+	var items []json.RawMessage
+	if listRaw, ok := payload[field]; ok {
+		_ = json.Unmarshal(listRaw, &items)
+	}
+	return len(items) == 0
+}
+
+// streamScopedMissNotice is the diagnostic shown when a stream-scoped search
+// returns nothing: a miss often means the activity lives in a different stream
+// than the one queried.
+func streamScopedMissNotice(stream string) (notice, hint string) {
+	suggestion := "another stream such as outbound or broadcast"
+	switch stream {
+	case "outbound":
+		suggestion = "broadcast"
+	case "broadcast", "broadcasts":
+		suggestion = "outbound"
+	}
+	notice = fmt.Sprintf("No results in message stream %q.", stream)
+	hint = fmt.Sprintf("Results are scoped per stream, so transactional (outbound) and broadcast mail are searched separately. Retry with --stream %s, or run 'streams list' to see this server's streams.", suggestion)
+	return notice, hint
+}
+
 func localPage(items []json.RawMessage, offset, count int) []json.RawMessage {
 	if offset < 0 {
 		offset = 0

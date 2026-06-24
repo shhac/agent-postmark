@@ -301,6 +301,23 @@ func TestMessagesSearchCompactsBulkyContent(t *testing.T) {
 	}
 }
 
+func TestMessagesSearchEmptyHintsAtOtherStream(t *testing.T) {
+	stdout, stderr, _ := runCLI(t, "messages", "search", "--to", "nobody@example.com", "--stream", "outbound")
+	if !strings.Contains(stderr, `"notice"`) || !strings.Contains(stderr, "message stream \\\"outbound\\\"") || !strings.Contains(stderr, "--stream broadcast") {
+		t.Fatalf("expected an other-stream notice on stderr, stderr = %s", stderr)
+	}
+	if strings.Contains(stdout, "notice") {
+		t.Fatalf("notice leaked into the stdout data stream: %s", stdout)
+	}
+}
+
+func TestMessagesSearchWithResultsHasNoNotice(t *testing.T) {
+	_, stderr, _ := runCLI(t, "messages", "search", "--to", "user@example.com")
+	if stderr != "" {
+		t.Fatalf("notice emitted for a non-empty result: %s", stderr)
+	}
+}
+
 func TestSuppressionsListUsesPaginatedListEndpoint(t *testing.T) {
 	stdout, stderr, doer := runCLI(t, "suppressions", "list", "--stream", "outbound", "--count", "1", "--offset", "0", "--email", "user@example.com", "--reason", "ManualSuppression", "--origin", "Customer")
 	if stderr != "" {
