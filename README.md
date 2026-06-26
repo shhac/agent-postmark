@@ -132,4 +132,4 @@ AGENT_POSTMARK_BASE_URL=http://127.0.0.1:12122 \
 
 ## License
 
-MIT
+PolyForm Perimeter License 1.0.0 — see [LICENSE](LICENSE).
