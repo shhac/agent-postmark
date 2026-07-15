@@ -18,7 +18,6 @@ error hints, and no access to Postmark account or server tokens.
 - Redaction: tokens, secrets, URL credentials, and original raw email blobs are
   redacted by default.
 - Mock server: `mockpostmark` provides deterministic e2e fixtures.
-- Agent onboarding: ships with `skills/agent-postmark/SKILL.md`.
 
 ## Quick Start
 
@@ -51,6 +50,14 @@ for account or server tokens, and the CLI returns only a redacted receipt.
 ```bash
 agent-postmark auth list
 ```
+
+## Claude Code / AI agent skill
+
+```bash
+npx skills add shhac/agent-skills --skill agent-postmark --global
+```
+
+Installs the `agent-postmark` skill globally so Claude Code (and other AI agents) can discover and use it automatically. It ships from [`shhac/agent-skills`](https://github.com/shhac/agent-skills) — the whole family's skills in one repo, so `npx skills update` checks a single source no matter how many you use. Want several at once? Run `npx skills add shhac/agent-skills --global` and pick from the list.
 
 ## Token Scopes
 
