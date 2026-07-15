@@ -1,7 +1,7 @@
 ---
 name: agent-postmark
 description: |
-  Triage and investigate Postmark delivery, bounces, outbound and inbound messages, suppressions, sender domains, sender signatures, message streams, webhooks, and server/account configuration. Use when:
+  Triage Postmark email delivery, bounces, and suppressions. Covers outbound and inbound messages, sender domains, sender signatures, message streams, webhooks, and server/account configuration. Use when:
   - Explaining why an email did not arrive, bounced, or was suppressed
   - Checking Postmark message status, bounce state, inactive recipients, opens, clicks, or inbound processing
   - Inspecting sender domain, DKIM, SPF, Return-Path, or sender signature health
