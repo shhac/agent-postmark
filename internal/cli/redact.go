@@ -56,8 +56,8 @@ func redactRaw(raw json.RawMessage) json.RawMessage {
 // fields (with the documented safe-shape exceptions for *_configured presence
 // metadata) and the OriginalEmail field.
 func postmarkSecrets() out.RedactRule {
-	return func(_, key string, value any, _ map[string]any) bool {
-		return shouldRedact(key, value)
+	return func(field out.RedactField) bool {
+		return shouldRedact(field.Key, field.Value)
 	}
 }
 
