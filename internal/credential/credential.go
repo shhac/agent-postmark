@@ -1,12 +1,11 @@
 package credential
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/shhac/agent-postmark/internal/config"
+	"github.com/shhac/lib-agent-cli/creds"
 )
 
 type TokenKind string
@@ -47,14 +46,15 @@ func StoreAccount(profile string, token string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	index, err := readIndex()
-	if err != nil {
-		return "", err
-	}
-	current := index[profile]
-	current.AccountToken = true
-	index[profile] = current
-	if err := writeIndex(index); err != nil {
+	// The index write is the step that must not race: the token is already
+	// stored by now, so an entry lost to a concurrent writer leaves that token
+	// referenced by nothing.
+	if err := updateIndex(func(index map[string]entry) error {
+		current := index[profile]
+		current.AccountToken = true
+		index[profile] = current
+		return nil
+	}); err != nil {
 		return "", err
 	}
 	return storage, nil
@@ -65,20 +65,18 @@ func StoreServer(profile, server string, token string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	index, err := readIndex()
-	if err != nil {
-		return "", err
-	}
-	current := index[profile]
-	if current.Servers == nil {
-		current.Servers = map[string]bool{}
-	}
-	current.Servers[server] = true
-	if server == "default" {
-		current.ServerToken = true
-	}
-	index[profile] = current
-	if err := writeIndex(index); err != nil {
+	if err := updateIndex(func(index map[string]entry) error {
+		current := index[profile]
+		if current.Servers == nil {
+			current.Servers = map[string]bool{}
+		}
+		current.Servers[server] = true
+		if server == "default" {
+			current.ServerToken = true
+		}
+		index[profile] = current
+		return nil
+	}); err != nil {
 		return "", err
 	}
 	return storage, nil
@@ -126,47 +124,43 @@ func GetServer(profile, server string) (string, error) {
 }
 
 func Remove(name string) error {
-	index, err := readIndex()
-	if err != nil {
-		return err
-	}
-	current, ok := index[name]
-	if !ok {
-		return &NotFoundError{Name: name}
-	}
-	if current.AccountToken {
-		deleteSecret(accountKeychainName(name))
-	}
-	if current.ServerToken {
-		deleteSecret(serverKeychainName(name, "default"))
-	}
-	for server := range current.Servers {
-		deleteSecret(serverKeychainName(name, server))
-	}
-	delete(index, name)
-	return writeIndex(index)
+	return updateIndex(func(index map[string]entry) error {
+		current, ok := index[name]
+		if !ok {
+			return &NotFoundError{Name: name}
+		}
+		if current.AccountToken {
+			deleteSecret(accountKeychainName(name))
+		}
+		if current.ServerToken {
+			deleteSecret(serverKeychainName(name, "default"))
+		}
+		for server := range current.Servers {
+			deleteSecret(serverKeychainName(name, server))
+		}
+		delete(index, name)
+		return nil
+	})
 }
 
 func RemoveServer(profile, server string) error {
-	index, err := readIndex()
-	if err != nil {
-		return err
-	}
-	current, ok := index[profile]
-	hasServer := ok && current.Servers != nil && current.Servers[server]
-	hasLegacyDefault := ok && server == "default" && current.ServerToken
-	if !hasServer && !hasLegacyDefault {
-		return &NotFoundError{Name: profile + "/server/" + server, Kind: ServerToken}
-	}
-	deleteSecret(serverKeychainName(profile, server))
-	if current.Servers != nil {
-		delete(current.Servers, server)
-	}
-	if server == "default" {
-		current.ServerToken = false
-	}
-	index[profile] = current
-	return writeIndex(index)
+	return updateIndex(func(index map[string]entry) error {
+		current, ok := index[profile]
+		hasServer := ok && current.Servers != nil && current.Servers[server]
+		hasLegacyDefault := ok && server == "default" && current.ServerToken
+		if !hasServer && !hasLegacyDefault {
+			return &NotFoundError{Name: profile + "/server/" + server, Kind: ServerToken}
+		}
+		deleteSecret(serverKeychainName(profile, server))
+		if current.Servers != nil {
+			delete(current.Servers, server)
+		}
+		if server == "default" {
+			current.ServerToken = false
+		}
+		index[profile] = current
+		return nil
+	})
 }
 
 func Summary(name string) map[string]any {
@@ -258,16 +252,20 @@ func credentialsPath() string {
 	return filepath.Join(config.ConfigDir(), "credentials.json")
 }
 
+// indexStore is credentials.json's file: 0600 writes into a 0700 parent, atomic
+// replacement, and Update for a locked read-modify-write. This used to be
+// hand-rolled with os.ReadFile/os.WriteFile, which carried a lost-update race —
+// two concurrent writers each built their write from a stale snapshot, and the
+// loser's entry vanished while its token stayed in the keychain, unreferenced
+// and un-removable (`profiles list` can't show it, `profiles remove` can't look
+// it up).
+func indexStore() creds.Store {
+	return creds.Store{Path: credentialsPath()}
+}
+
 func readIndex() (map[string]entry, error) {
-	data, err := os.ReadFile(credentialsPath())
-	if err != nil {
-		if os.IsNotExist(err) {
-			return map[string]entry{}, nil
-		}
-		return nil, err
-	}
-	var out map[string]entry
-	if err := json.Unmarshal(data, &out); err != nil {
+	out := map[string]entry{}
+	if err := indexStore().Load(&out); err != nil {
 		return nil, err
 	}
 	if out == nil {
@@ -276,13 +274,15 @@ func readIndex() (map[string]entry, error) {
 	return out, nil
 }
 
-func writeIndex(index map[string]entry) error {
-	if err := os.MkdirAll(config.ConfigDir(), 0o755); err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(index, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(credentialsPath(), append(data, '\n'), 0o600)
+// updateIndex applies mutate to the index under an exclusive lock, so two
+// concurrent `profiles add`/`profiles remove` invocations serialize instead of
+// clobbering each other. An error from mutate aborts without writing.
+func updateIndex(mutate func(index map[string]entry) error) error {
+	index := map[string]entry{}
+	return indexStore().Update(&index, func() error {
+		if index == nil {
+			index = map[string]entry{}
+		}
+		return mutate(index)
+	})
 }

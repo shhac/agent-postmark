@@ -1,9 +1,11 @@
 package credential
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/shhac/agent-postmark/internal/config"
@@ -74,5 +76,112 @@ func TestStore_Headless_FileFallback(t *testing.T) {
 	}
 	if rest, _ := readSecrets(); len(rest) != 0 {
 		t.Errorf("secrets file still has entries after Remove: %v", rest)
+	}
+}
+
+// setupHeadless points the credential store at a temp dir and forces the file
+// fallback, so the concurrency tests below exercise credentials.json AND
+// credentials.secrets.json without touching the host keychain (which would also
+// mean a GUI prompt on darwin).
+func setupHeadless(t *testing.T) string {
+	t.Helper()
+	t.Setenv("AGENT_POSTMARK_NO_KEYCHAIN", "1")
+	dir := t.TempDir()
+	config.SetConfigDir(dir)
+	t.Cleanup(func() { config.SetConfigDir("") })
+	return dir
+}
+
+// Concurrent StoreAccount calls must not lose each other's entries, in either
+// file they touch.
+//
+// This is the failure that matters most for the index: the secret write has
+// already succeeded by the time credentials.json is written, so an entry lost to
+// a racing writer leaves a live token that nothing references — invisible to
+// `profiles list` and unreachable by `profiles remove`, which looks the name up
+// in the index first. Under the keychain opt-out the same race also hit
+// credentials.secrets.json, where the lost update is the token itself.
+func TestConcurrentStoreAccountDoesNotLoseEntries(t *testing.T) {
+	setupHeadless(t)
+
+	const writers = 20
+	var wg sync.WaitGroup
+	for i := range writers {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			profile := fmt.Sprintf("profile-%02d", i)
+			if _, err := StoreAccount(profile, fmt.Sprintf("acct-token-%02d", i)); err != nil {
+				t.Errorf("StoreAccount: %v", err)
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	index, err := readIndex()
+	if err != nil {
+		t.Fatalf("readIndex: %v", err)
+	}
+	if len(index) != writers {
+		t.Errorf("%d of %d entries survived in credentials.json — updates were lost", len(index), writers)
+	}
+	secrets, err := readSecrets()
+	if err != nil {
+		t.Fatalf("readSecrets: %v", err)
+	}
+	if len(secrets) != writers {
+		t.Errorf("%d of %d secrets survived in credentials.secrets.json — updates were lost", len(secrets), writers)
+	}
+	for i := range writers {
+		profile := fmt.Sprintf("profile-%02d", i)
+		got, err := GetAccount(profile)
+		if err != nil {
+			t.Errorf("%s was lost: %v", profile, err)
+			continue
+		}
+		if want := fmt.Sprintf("acct-token-%02d", i); got != want {
+			t.Errorf("%s round-tripped as %q, want %q", profile, got, want)
+		}
+	}
+}
+
+// StoreServer merges into a nested map under a SINGLE index entry, so every
+// concurrent writer here reads and rewrites the same key — the shape most likely
+// to drop a sibling's write. `profiles setup` fans out exactly this way, one
+// call per --server.
+func TestConcurrentStoreServerDoesNotLoseEntries(t *testing.T) {
+	setupHeadless(t)
+
+	const writers = 20
+	var wg sync.WaitGroup
+	for i := range writers {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			server := fmt.Sprintf("server-%02d", i)
+			if _, err := StoreServer("prod", server, fmt.Sprintf("server-token-%02d", i)); err != nil {
+				t.Errorf("StoreServer: %v", err)
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	index, err := readIndex()
+	if err != nil {
+		t.Fatalf("readIndex: %v", err)
+	}
+	if got := len(index["prod"].Servers); got != writers {
+		t.Errorf("%d of %d servers survived in credentials.json — updates were lost", got, writers)
+	}
+	for i := range writers {
+		server := fmt.Sprintf("server-%02d", i)
+		got, err := GetServer("prod", server)
+		if err != nil {
+			t.Errorf("%s was lost: %v", server, err)
+			continue
+		}
+		if want := fmt.Sprintf("server-token-%02d", i); got != want {
+			t.Errorf("%s round-tripped as %q, want %q", server, got, want)
+		}
 	}
 }

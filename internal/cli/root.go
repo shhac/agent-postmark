@@ -40,7 +40,7 @@ func newRootCmd(version string) *cobra.Command {
 		Globals:        &globals.Globals,
 		Redacts:        true,
 		DefaultFormat:  output.FormatNDJSON,
-		ConfigDefaults: func() { applyConfiguredDefaults(root, globals) },
+		ConfigDefaults: func(*cobra.Command) { applyConfiguredDefaults(root, globals) },
 		UnknownHint:    "run 'agent-postmark usage' to see the available domains",
 	})
 

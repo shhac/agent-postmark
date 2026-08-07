@@ -1,11 +1,11 @@
 package credential
 
 import (
-	"encoding/json"
-	"os"
+	"errors"
 	"path/filepath"
 
 	"github.com/shhac/agent-postmark/internal/config"
+	"github.com/shhac/lib-agent-cli/creds"
 )
 
 // credentials.secrets.json holds raw tokens when the macOS keychain is
@@ -18,16 +18,19 @@ func secretsPath() string {
 	return filepath.Join(config.ConfigDir(), "credentials.secrets.json")
 }
 
+// secretsStore is credentials.secrets.json's file: 0600 writes into a 0700
+// parent, atomic replacement, and Update for a locked read-modify-write. It
+// holds raw tokens, so a lost update here loses the secret itself, not just a
+// pointer to it. Its lock is separate from the index's — the two are different
+// files — and is only ever taken while already holding the index lock (never the
+// other way round), so the ordering cannot deadlock.
+func secretsStore() creds.Store {
+	return creds.Store{Path: secretsPath()}
+}
+
 func readSecrets() (map[string]string, error) {
-	data, err := os.ReadFile(secretsPath())
-	if err != nil {
-		if os.IsNotExist(err) {
-			return map[string]string{}, nil
-		}
-		return nil, err
-	}
-	var m map[string]string
-	if err := json.Unmarshal(data, &m); err != nil {
+	m := map[string]string{}
+	if err := secretsStore().Load(&m); err != nil {
 		return nil, err
 	}
 	if m == nil {
@@ -36,15 +39,23 @@ func readSecrets() (map[string]string, error) {
 	return m, nil
 }
 
-func writeSecrets(m map[string]string) error {
-	if err := os.MkdirAll(config.ConfigDir(), 0o755); err != nil {
-		return err
+// errSkipWrite lets a mutate callback decline to persist anything without
+// updateSecrets treating it as a real failure — see removeFileSecret, which must
+// not conjure a secrets file for a keychain-backed install.
+var errSkipWrite = errors.New("credential: skip write")
+
+func updateSecrets(mutate func(secrets map[string]string) error) error {
+	m := map[string]string{}
+	err := secretsStore().Update(&m, func() error {
+		if m == nil {
+			m = map[string]string{}
+		}
+		return mutate(m)
+	})
+	if errors.Is(err, errSkipWrite) {
+		return nil
 	}
-	data, err := json.MarshalIndent(m, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(secretsPath(), append(data, '\n'), 0o600)
+	return err
 }
 
 // storeSecret persists a token under name, preferring the macOS keychain and
@@ -56,12 +67,10 @@ func storeSecret(name, token string) (string, error) {
 		removeFileSecret(name)
 		return "keychain", nil
 	}
-	secrets, err := readSecrets()
-	if err != nil {
-		return "", err
-	}
-	secrets[name] = token
-	if err := writeSecrets(secrets); err != nil {
+	if err := updateSecrets(func(secrets map[string]string) error {
+		secrets[name] = token
+		return nil
+	}); err != nil {
 		return "", err
 	}
 	return "file", nil
@@ -106,13 +115,14 @@ func deleteSecret(name string) {
 }
 
 func removeFileSecret(name string) {
-	secrets, err := readSecrets()
-	if err != nil {
-		return
-	}
-	if _, ok := secrets[name]; !ok {
-		return
-	}
-	delete(secrets, name)
-	_ = writeSecrets(secrets)
+	_ = updateSecrets(func(secrets map[string]string) error {
+		if _, ok := secrets[name]; !ok {
+			// Nothing file-backed under this name — the common case on a
+			// keychain host, where writing would create an empty secrets file
+			// that never existed before.
+			return errSkipWrite
+		}
+		delete(secrets, name)
+		return nil
+	})
 }
