@@ -1,13 +1,13 @@
 ---
 name: agent-postmark
 description: |
-  Triage Postmark email delivery, bounces, and suppressions. Covers outbound and inbound messages, sender domains, sender signatures, message streams, webhooks, and server/account configuration. Use when:
-  - Explaining why an email did not arrive, bounced, or was suppressed
-  - Checking Postmark message status, bounce state, inactive recipients, opens, clicks, or inbound processing
-  - Inspecting sender domain, DKIM, SPF, Return-Path, or sender signature health
-  - Checking Postmark webhooks, message streams, servers, or delivery stats
-  - Looking up Postmark servers, bounces, messages, domains, signatures, suppressions, or webhook configuration
-  Triggers: "postmark", "email delivery", "bounce", "hard bounce", "suppression", "inactive recipient", "message stream", "sender signature", "DKIM", "SPF", "Return-Path", "webhook delivery", "inbound email", "email opens", "email clicks"
+  Triage Postmark email delivery, bounces, and suppressions across outbound
+  and inbound messages, sender domains and signatures, message streams,
+  webhooks, and server or account configuration. Use when explaining why an
+  email did not arrive, bounced, or was suppressed, checking message status,
+  inactive recipients, opens, clicks, or inbound processing, inspecting
+  DKIM, SPF, Return-Path, or signature health, or reviewing webhooks,
+  streams, servers, and delivery stats.
 allowed-tools: Bash(agent-postmark *) Bash(mockpostmark *) Read Grep Glob
 ---
 
